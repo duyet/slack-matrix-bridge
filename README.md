@@ -62,42 +62,46 @@ Paste the Bridge URL into any Slack-compatible webhook service:
 ## Usage Examples
 
 ### Simple Text
-```json
-{
-  "text": "Deployment successful!"
-}
+```bash
+curl -X POST https://your-worker.workers.dev/BASE64_STRING \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Deployment successful!"}'
 ```
 
 ### Block Kit
-```json
-{
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Build* #1234 completed\nStatus: <https://example.com|Success>"
+```bash
+curl -X POST https://your-worker.workers.dev/BASE64_STRING \
+  -H "Content-Type: application/json" \
+  -d '{
+    "blocks": [
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*Build* #1234 completed\nStatus: <https://example.com|Success>"
+        }
       }
-    }
-  ]
-}
+    ]
+  }'
 ```
 
 ### Legacy Attachment
-```json
-{
-  "attachments": [
-    {
-      "color": "good",
-      "title": "Deployment",
-      "text": "Successfully deployed to production",
-      "fields": [
-        {"title": "Environment", "value": "Production"},
-        {"title": "Duration", "value": "2m 34s"}
-      ]
-    }
-  ]
-}
+```bash
+curl -X POST https://your-worker.workers.dev/BASE64_STRING \
+  -H "Content-Type: application/json" \
+  -d '{
+    "attachments": [
+      {
+        "color": "good",
+        "title": "Deployment",
+        "text": "Successfully deployed to production",
+        "fields": [
+          {"title": "Environment", "value": "Production"},
+          {"title": "Duration", "value": "2m 34s"}
+        ]
+      }
+    ]
+  }'
 ```
 
 ## Deployment
