@@ -369,7 +369,7 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
   return {
     text: fallbackText,
     html: html.trim() || undefined,
-    username: payload.username || 'SlackBridge'
+    ...(payload.username && { username: payload.username })
   };
 }
 
