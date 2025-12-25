@@ -33,8 +33,13 @@ jobs:
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: https://openrouter.ai/api
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.OPENROUTER_API_KEY }}
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ""
+          claude_args: |
+            --model @preset/claude-code-github-action
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
