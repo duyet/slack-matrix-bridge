@@ -34,13 +34,13 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: https://openrouter.ai/api
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.OPENROUTER_API_KEY }}
         with:
           anthropic_api_key: ""
           claude_args: |
             --model @preset/claude-code-github-action
-          env:
-            ANTHROPIC_BASE_URL: https://openrouter.ai/api
-            ANTHROPIC_AUTH_TOKEN: ${{ secrets.OPENROUTER_API_KEY }}
 
           prompt: |
             REPO: ${{ github.repository }}
