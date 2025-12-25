@@ -1,7 +1,11 @@
 name = "slack-matrix-bridge"
 main = "src/index.ts"
-compatibility_date = "2024-12-01"
+compatibility_date = "2025-01-01"
 account_id = "23050adb6c92e313643a29e1ba64c88a"
+
+# Enable production logs
+[observability]
+enabled = true
 
 # Development configuration
 [dev]
