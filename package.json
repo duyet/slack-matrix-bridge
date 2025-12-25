@@ -4,10 +4,10 @@
   "description": "Slack to Matrix messaging bridge on Cloudflare Workers",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "tail": "wrangler tail",
-    "typecheck": "tsc --noEmit",
+    "dev": "bun run wrangler dev",
+    "deploy": "bun run wrangler deploy",
+    "tail": "bun run wrangler tail",
+    "typecheck": "bun run tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"

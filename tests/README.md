@@ -28,22 +28,22 @@ The Slack-to-Matrix Bridge uses Vitest with the Cloudflare Workers testing pool 
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Run tests in watch mode
-npm test
+bun test
 
 # Run tests once
-npm run test:run
+bun run test:run
 
 # Run tests with coverage report
-npm run test:coverage
+bun run test:coverage
 
 # Run tests for a specific file
-npx vitest run src/transpiler.test.ts
+bunx vitest run src/transpiler.test.ts
 
 # Run tests matching a pattern
-npx vitest run -t "escapeHtml"
+bunx vitest run -t "escapeHtml"
 ```
 
 ## Test Coverage
