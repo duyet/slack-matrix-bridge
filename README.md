@@ -1,6 +1,6 @@
 # Slack-Matrix Bridge
 
-A stateless Slack-to-Matrix webhook bridge hosted on Cloudflare Workers.
+A stateless Slack-to-Matrix webhook bridge hosted on Cloudflare Workers. One-shot build by Claude Code.
 
 ## Live Demo
 
