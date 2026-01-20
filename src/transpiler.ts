@@ -99,6 +99,10 @@ export function mrkdwnToHtml(mrkdwn: string): string {
   // Step 1: Escape HTML entities first
   let html = escapeHtml(mrkdwn);
 
+  // Step 1.5: Handle backslash escapes from tools like BugSink
+  // Remove backslashes before * and _ that were added for safe transport
+  html = html.replace(/\\\*/g, '*').replace(/\\_/g, '_');
+
   // Step 2: Links with optional text: <URL|Label> or <URL>
   // Negative lookahead prevents matching special tokens like <!here>, <@U123>
   html = html.replace(
@@ -186,7 +190,7 @@ function parseSectionBlock(block: SlackBlock): TranspilerResult {
     result.html += '<ul>';
     for (const field of block.fields) {
       const fieldHtml = mrkdwnToHtml(field.value || '');
-      result.html += `<li><b>${fieldHtml}</b></li>`;
+      result.html += `<li>${fieldHtml}</li>`;
       result.plain += `- ${field.value}\n`;
     }
     result.html += '</ul>';

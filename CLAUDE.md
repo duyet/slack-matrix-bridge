@@ -121,29 +121,41 @@ isValidBase64Url(encoded: string): boolean
 decodeMatrixUrl(encodedPath: string): string
 ```
 
+## Package Manager
+
+**Bun** is used as the package manager and runtime for this project. All `npm run` commands are executed via `bun run`.
+
+```bash
+# Install dependencies
+bun install
+
+# Run any npm script
+bun run <script>
+```
+
 ## Development Commands
 
 ```bash
 # Local development with hot reload
-npm run dev
+bun run dev
 
 # Deploy to Cloudflare Workers
-npm run deploy
+bun run deploy
 
 # View real-time logs from production
-npm run tail
+bun run tail
 
 # Type checking without emitting files
-npm run typecheck
+bun run typecheck
 
 # Run tests in watch mode
-npm test
+bun test
 
 # Run tests once
-npm run test:run
+bun run test:run
 
 # Run tests with coverage report
-npm run test:coverage
+bun run test:coverage
 ```
 
 ## Testing Strategy
@@ -171,13 +183,13 @@ npm run test:coverage
 
 ```bash
 # Watch mode for development
-vitest
+bun test
 
 # Single run for CI/CD
-vitest run
+bun run test:run
 
 # With coverage
-vitest run --coverage
+bun run test:coverage
 ```
 
 ## Important Implementation Details
@@ -328,32 +340,32 @@ V8 Isolates enable 0ms cold starts vs ~500ms for container-based Lambda.
 
 ```bash
 # Reinstall wrangler globally
-npm uninstall -g wrangler
-npm install -g wrangler
+bun uninstall -g wrangler
+bun install -g wrangler
 
-# Or use npx to avoid global install
-npx wrangler deploy
+# Or use bunx to avoid global install
+bunx wrangler deploy
 ```
 
-### Type Errors After `npm install`
+### Type Errors After `bun install`
 
 ```bash
 # Regenerate type definitions
-npm run typecheck
+bun run typecheck
 
 # Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
+rm -rf node_modules bun.lockb
+bun install
 ```
 
 ### Tests Failing Locally
 
 ```bash
 # Ensure test environment is clean
-npm run test:run
+bun run test:run
 
 # Check if specific test is failing
-npm test -- transpiler.test.ts
+bun test transpiler.test.ts
 ```
 
 ## Resources
