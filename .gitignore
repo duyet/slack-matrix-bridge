@@ -6,6 +6,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Compiled JS from TS (Wrangler compiles on-the-fly)
+src/*.js
+
 # Environment files
 .env
 .env.local
