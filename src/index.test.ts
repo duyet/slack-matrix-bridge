@@ -341,8 +341,8 @@ describe('Payload parsing', () => {
     expect(capturedBody).toBeDefined();
 
     const parsedBody = JSON.parse(capturedBody!);
-    expect(parsedBody.text).toContain('Hello from Slack');
-    expect(parsedBody.username).toBe('TestBot');
+    expect(parsedBody.version).toBe('v2');
+    expect(parsedBody.plain).toContain('Hello from Slack');
   });
 });
 
@@ -416,8 +416,9 @@ describe('Successful webhook forwarding', () => {
     });
 
     const parsedBody = JSON.parse(capturedBody!);
-    expect(parsedBody.username).toBe('SlackBot');
-    expect(parsedBody.text).toBe('*Bold* message');
+    expect(parsedBody.version).toBe('v2');
+    expect(parsedBody.msgtype).toBe('m.notice');
+    expect(parsedBody.plain).toBe('*Bold* message');
   });
 
   it('should forward Block Kit payload', async () => {
@@ -443,7 +444,8 @@ describe('Successful webhook forwarding', () => {
     await app.request(request, env);
 
     const parsedBody = JSON.parse(capturedBody!);
-    expect(parsedBody.text).toContain('Block content');
+    expect(parsedBody.version).toBe('v2');
+    expect(parsedBody.plain).toContain('Block content');
     expect(parsedBody.html).toContain('<p>Block content</p>');
   });
 
@@ -471,7 +473,8 @@ describe('Successful webhook forwarding', () => {
     await app.request(request, env);
 
     const parsedBody = JSON.parse(capturedBody!);
-    expect(parsedBody.text).toContain('🟢 Success');
+    expect(parsedBody.version).toBe('v2');
+    expect(parsedBody.plain).toContain('🟢 Success');
     expect(parsedBody.html).toContain('🟢');
   });
 });
@@ -736,12 +739,12 @@ describe('Integration tests', () => {
     expect(capturedRequest).toBeDefined();
 
     const matrixBody = await capturedRequest!.json();
-    expect(matrixBody.username).toBe('TestBot');
-    expect(matrixBody.text).toContain('Deployment Status');
+    expect(matrixBody.version).toBe('v2');
+    expect(matrixBody.plain).toContain('Deployment Status');
     expect(matrixBody.html).toContain('<h3>Deployment Status</h3>');
     expect(matrixBody.html).toContain('<b>successful</b>');
     expect(matrixBody.html).toContain('🟢');
-    expect(matrixBody.text).toContain('Environment: production');
+    expect(matrixBody.plain).toContain('Environment: production');
   });
 
   it('should handle complex mrkdwn with links and formatting', async () => {
@@ -762,12 +765,14 @@ describe('Integration tests', () => {
     await app.request(request, env);
 
     const matrixPayload = JSON.parse(capturedBody!);
+    expect(matrixPayload.version).toBe('v2');
     expect(matrixPayload.html).toContain('<a href="https://example.com/docs">documentation</a>');
     expect(matrixPayload.html).toContain('<b>Important</b>');
     expect(matrixPayload.html).toContain('<code>code</code>');
+    expect(matrixPayload.markdown).toContain('[documentation](https://example.com/docs)');
   });
 
-  it('should use default username when not provided', async () => {
+  it('should have proper v2 payload structure', async () => {
     const matrixUrl = 'https://matrix.example.com/webhook';
     const encodedPath = encodeMatrixUrl(matrixUrl);
 
@@ -785,7 +790,11 @@ describe('Integration tests', () => {
     await app.request(request, env);
 
     const matrixPayload = JSON.parse(capturedBody!);
-    expect(matrixPayload.username).toBe('SlackBridge');
+    expect(matrixPayload.version).toBe('v2');
+    expect(matrixPayload.msgtype).toBe('m.notice');
+    expect(matrixPayload.plain).toBeDefined();
+    expect(matrixPayload.html).toBeDefined();
+    expect(matrixPayload.markdown).toBeDefined();
   });
 
   it('should preserve special characters in text', async () => {
@@ -806,6 +815,7 @@ describe('Integration tests', () => {
     await app.request(request, env);
 
     const matrixPayload = JSON.parse(capturedBody!);
+    expect(matrixPayload.version).toBe('v2');
     expect(matrixPayload.html).toContain('&lt;');
     expect(matrixPayload.html).toContain('&gt;');
     expect(matrixPayload.html).toContain('&amp;');

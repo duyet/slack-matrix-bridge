@@ -49,14 +49,17 @@ export interface SlackPayload {
 }
 
 export interface MatrixPayload {
-  text: string;
+  version: 'v2';
+  plain: string;
   html?: string;
-  username?: string;
+  markdown?: string;
+  msgtype?: string;
 }
 
 interface TranspilerResult {
   html: string;
   plain: string;
+  markdown: string;
 }
 
 // ============================================================================
@@ -141,6 +144,49 @@ export function mrkdwnToHtml(mrkdwn: string): string {
 }
 
 // ============================================================================
+// Mrkdwn to Markdown Transpiler
+// ============================================================================
+
+/**
+ * Transpiles Slack's proprietary mrkdwn format to standard markdown.
+ *
+ * Produces clean markdown for debugging/logging purposes.
+ * Note: Matrix still uses HTML for rendering, but markdown is useful for:
+ * - Debugging/development
+ * - Future-proofing if Hookshot adds markdown support
+ * - Logs and analytics
+ *
+ * Transformation order:
+ * 1. Links: <URL|Text> → [Text](URL), <URL> → <URL>
+ * 2. Remove backslash escapes: \* → *, \_ → _
+ * 3. Keep bold, italic, strikethrough, code as-is (standard markdown)
+ * 4. Remove stray word boundary artifacts from HTML conversion
+ */
+export function mrkdwnToMarkdown(mrkdwn: string): string {
+  if (!mrkdwn || typeof mrkdwn !== 'string') return '';
+
+  let md = mrkdwn;
+
+  // Step 1: Remove backslash escapes (reverse of what we do for HTML)
+  md = md.replace(/\\\*/g, '*').replace(/\\_/g, '_');
+
+  // Step 2: Links with optional text: <URL|Label> → [Label](URL)
+  // Negative lookahead prevents matching special tokens like <!here>, <@U123>
+  md = md.replace(/<(?![!@#])([^&>\|]+)\|([^&>]+)>/g, '[$2]($1)');
+  // Bare URLs: <URL> → <URL> (standard markdown for autolinks)
+  md = md.replace(/<(?![!@#])([^&>\|]+)>/g, '<$1>');
+
+  // Step 3: Bold, italic, strikethrough, code are already standard markdown
+  // *text* → bold
+  // _text_ → italic
+  // ~text~ → strikethrough
+  // `text` → code
+  // No conversion needed!
+
+  return md;
+}
+
+// ============================================================================
 // Block Kit Parser
 // ============================================================================
 
@@ -149,7 +195,7 @@ export function mrkdwnToHtml(mrkdwn: string): string {
  * Handles: section, header, context, divider, image blocks.
  */
 function parseBlock(block: SlackBlock): TranspilerResult {
-  const result: TranspilerResult = { html: '', plain: '' };
+  const result: TranspilerResult = { html: '', plain: '', markdown: '' };
 
   switch (block.type) {
     case 'section':
@@ -162,7 +208,7 @@ function parseBlock(block: SlackBlock): TranspilerResult {
       return parseContextBlock(block);
 
     case 'divider':
-      return { html: '<hr>', plain: '---' };
+      return { html: '<hr>', plain: '---', markdown: '---' };
 
     case 'image':
       return parseImageBlock(block);
@@ -177,12 +223,13 @@ function parseBlock(block: SlackBlock): TranspilerResult {
  * Parses section blocks with optional text and fields.
  */
 function parseSectionBlock(block: SlackBlock): TranspilerResult {
-  const result: TranspilerResult = { html: '', plain: '' };
+  const result: TranspilerResult = { html: '', plain: '', markdown: '' };
 
   // Section text content
   if (block.text?.text) {
     result.html += `<p>${mrkdwnToHtml(block.text.text)}</p>`;
     result.plain += block.text.text + '\n';
+    result.markdown += mrkdwnToMarkdown(block.text.text) + '\n\n';
   }
 
   // Section fields (displayed as columns in Slack, as list in Matrix)
@@ -192,8 +239,10 @@ function parseSectionBlock(block: SlackBlock): TranspilerResult {
       const fieldHtml = mrkdwnToHtml(field.value || '');
       result.html += `<li>${fieldHtml}</li>`;
       result.plain += `- ${field.value}\n`;
+      result.markdown += `- ${mrkdwnToMarkdown(field.value || '')}\n`;
     }
     result.html += '</ul>';
+    result.markdown += '\n';
   }
 
   return result;
@@ -206,28 +255,31 @@ function parseHeaderBlock(block: SlackBlock): TranspilerResult {
   if (block.text?.text) {
     return {
       html: `<h3>${escapeHtml(block.text.text)}</h3>`,
-      plain: `## ${block.text.text}\n`
+      plain: `## ${block.text.text}\n`,
+      markdown: `## ${block.text.text}\n\n`
     };
   }
-  return { html: '', plain: '' };
+  return { html: '', plain: '', markdown: '' };
 }
 
 /**
  * Parses context blocks (metadata in small gray text).
  */
 function parseContextBlock(block: SlackBlock): TranspilerResult {
-  const result: TranspilerResult = { html: '<br><small>', plain: '' };
+  const result: TranspilerResult = { html: '<br><small>', plain: '', markdown: '' };
 
   if (block.elements && Array.isArray(block.elements)) {
     for (const element of block.elements) {
       if (element.text) {
         result.html += mrkdwnToHtml(element.text) + ' ';
         result.plain += element.text + ' ';
+        result.markdown += element.text + ' ';
       }
     }
   }
 
   result.html += '</small>';
+  result.markdown += '\n\n';
   return result;
 }
 
@@ -239,10 +291,11 @@ function parseImageBlock(block: SlackBlock): TranspilerResult {
     const altText = block.alt_text || 'Image';
     return {
       html: `<img src="${block.image_url}" alt="${escapeHtml(altText)}" /><br>`,
-      plain: `[Image: ${altText}]\n`
+      plain: `[Image: ${altText}]\n`,
+      markdown: `![${altText}](${block.image_url})\n\n`
     };
   }
-  return { html: '', plain: '' };
+  return { html: '', plain: '', markdown: '' };
 }
 
 // ============================================================================
@@ -281,7 +334,7 @@ function mapColorToIcon(color?: string): string {
  * Handles color mapping, field flattening, and title links.
  */
 function parseAttachment(attachment: SlackAttachment): TranspilerResult {
-  const result: TranspilerResult = { html: '', plain: '' };
+  const result: TranspilerResult = { html: '', plain: '', markdown: '' };
 
   // Map color to emoji indicator
   const icon = mapColorToIcon(attachment.color);
@@ -290,6 +343,7 @@ function parseAttachment(attachment: SlackAttachment): TranspilerResult {
   if (attachment.pretext) {
     result.html += `<p>${mrkdwnToHtml(attachment.pretext)}</p>`;
     result.plain += attachment.pretext + '\n';
+    result.markdown += mrkdwnToMarkdown(attachment.pretext) + '\n\n';
   }
 
   // Title with optional link
@@ -302,12 +356,18 @@ function parseAttachment(attachment: SlackAttachment): TranspilerResult {
     }
     result.html += `<h4>${icon}${titleHtml}</h4>`;
     result.plain += `${icon}${attachment.title}\n`;
+    if (attachment.title_link) {
+      result.markdown += `${icon}[${attachment.title}](${attachment.title_link})\n\n`;
+    } else {
+      result.markdown += `${icon}${attachment.title}\n\n`;
+    }
   }
 
   // Main text content
   if (attachment.text) {
     result.html += `<p>${mrkdwnToHtml(attachment.text)}</p>`;
     result.plain += attachment.text + '\n';
+    result.markdown += mrkdwnToMarkdown(attachment.text) + '\n\n';
   }
 
   // Fields (flattened from grid layout to list)
@@ -317,8 +377,11 @@ function parseAttachment(attachment: SlackAttachment): TranspilerResult {
       const title = field.title ? `<b>${escapeHtml(field.title)}:</b> ` : '';
       result.html += `<li>${title}${mrkdwnToHtml(field.value)}</li>`;
       result.plain += `${field.title || ''}: ${field.value}\n`;
+      const mdTitle = field.title ? `**${field.title}**: ` : '';
+      result.markdown += `- ${mdTitle}${mrkdwnToMarkdown(field.value)}\n`;
     }
     result.html += '</ul>';
+    result.markdown += '\n';
   }
 
   return result;
@@ -341,6 +404,7 @@ function parseAttachment(attachment: SlackAttachment): TranspilerResult {
 export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
   let html = '';
   let plain = '';
+  let markdown = '';
 
   // Priority 1: Modern Block Kit
   if (payload.blocks && Array.isArray(payload.blocks) && payload.blocks.length > 0) {
@@ -348,6 +412,7 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
       const parsed = parseBlock(block);
       html += parsed.html;
       plain += parsed.plain;
+      markdown += parsed.markdown;
     }
   }
 
@@ -357,6 +422,7 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
       const parsed = parseAttachment(attachment);
       html += parsed.html;
       plain += parsed.plain;
+      markdown += parsed.markdown;
     }
   }
 
@@ -365,15 +431,18 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
   if (!html && !plain && payload.text) {
     html = mrkdwnToHtml(payload.text);
     plain = payload.text;
+    markdown = mrkdwnToMarkdown(payload.text);
   }
 
   // Ensure we always have fallback text
   const fallbackText = plain.trim() || 'Received empty Slack payload';
 
   return {
-    text: fallbackText,
+    version: 'v2',
+    plain: fallbackText,
     html: html.trim() || undefined,
-    ...(payload.username && { username: payload.username })
+    markdown: markdown.trim() || undefined,
+    msgtype: 'm.notice'
   };
 }
 
