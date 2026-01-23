@@ -2,8 +2,6 @@
  * Comprehensive tests for Slack-to-Matrix transpiler
  *
  * Tests cover:
- * - HTML escaping (XSS prevention)
- * - Mrkdwn to HTML conversion
  * - Block Kit parsing (section, header, context, divider, image)
  * - Legacy attachment parsing
  * - End-to-end transformation
@@ -11,222 +9,11 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  escapeHtml,
-  mrkdwnToHtml,
   transformSlackToMatrix,
   isValidBase64Url,
   decodeMatrixUrl,
   type SlackPayload,
 } from './transpiler';
-
-// ============================================================================
-// HTML Escape Tests (XSS Prevention)
-// ============================================================================
-
-describe('escapeHtml', () => {
-  it('should escape ampersands', () => {
-    expect(escapeHtml('Tom & Jerry')).toBe('Tom &amp; Jerry');
-  });
-
-  it('should escape less than signs', () => {
-    expect(escapeHtml('a < b')).toBe('a &lt; b');
-  });
-
-  it('should escape greater than signs', () => {
-    expect(escapeHtml('a > b')).toBe('a &gt; b');
-  });
-
-  it('should escape double quotes', () => {
-    expect(escapeHtml('say "hello"')).toBe('say &quot;hello&quot;');
-  });
-
-  it('should escape single quotes', () => {
-    expect(escapeHtml("it's")).toBe('it&#39;s');
-  });
-
-  it('should escape mixed special characters', () => {
-    expect(escapeHtml('<script>alert("XSS")</script>')).toBe(
-      '&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;'
-    );
-  });
-
-  it('should escape all entities in sequence', () => {
-    expect(escapeHtml('<a href="test">Tom & Jerry</a>')).toBe(
-      '&lt;a href=&quot;test&quot;&gt;Tom &amp; Jerry&lt;/a&gt;'
-    );
-  });
-
-  it('should handle empty strings', () => {
-    expect(escapeHtml('')).toBe('');
-  });
-
-  it('should return empty string for non-string input', () => {
-    expect(escapeHtml(undefined as unknown as string)).toBe('');
-    expect(escapeHtml(null as unknown as string)).toBe('');
-    expect(escapeHtml(123 as unknown as string)).toBe('');
-  });
-
-  it('should handle strings without special characters', () => {
-    expect(escapeHtml('Hello World')).toBe('Hello World');
-  });
-
-  it('should escape ampersand before other entities', () => {
-    // Tests that & doesn't get double-escaped
-    expect(escapeHtml('&lt;')).toBe('&amp;lt;');
-  });
-});
-
-// ============================================================================
-// Mrkdwn to HTML Tests
-// ============================================================================
-
-describe('mrkdwnToHtml', () => {
-  describe('bold formatting', () => {
-    it('should convert asterisk-wrapped text to bold', () => {
-      expect(mrkdwnToHtml('*bold text*')).toBe('<b>bold text</b>');
-    });
-
-    it('should require word boundaries for bold', () => {
-      expect(mrkdwnToHtml('2 * 4 = 8')).toBe('2 * 4 = 8');
-    });
-
-    it('should handle bold at start of string', () => {
-      expect(mrkdwnToHtml('*bold* text')).toBe('<b>bold</b> text');
-    });
-
-    it('should handle bold at end of string', () => {
-      expect(mrkdwnToHtml('text *bold*')).toBe('text <b>bold</b>');
-    });
-
-    it('should handle bold in middle of string', () => {
-      expect(mrkdwnToHtml('some *bold* text')).toBe('some <b>bold</b> text');
-    });
-
-    it('should not convert single asterisk', () => {
-      expect(mrkdwnToHtml('not * bold')).toBe('not * bold');
-    });
-  });
-
-  describe('italic formatting', () => {
-    it('should convert underscore-wrapped text to italic', () => {
-      expect(mrkdwnToHtml('_italic text_')).toBe('<i>italic text</i>');
-    });
-
-    it('should require word boundaries for italic', () => {
-      expect(mrkdwnToHtml('snake_case_variable')).toBe('snake_case_variable');
-    });
-
-    it('should handle italic at start of string', () => {
-      expect(mrkdwnToHtml('_italic_ text')).toBe('<i>italic</i> text');
-    });
-
-    it('should handle italic at end of string', () => {
-      expect(mrkdwnToHtml('text _italic_')).toBe('text <i>italic</i>');
-    });
-
-    it('should not convert single underscore', () => {
-      expect(mrkdwnToHtml('not _ italic')).toBe('not _ italic');
-    });
-  });
-
-  describe('link formatting', () => {
-    it('should convert links with labels', () => {
-      expect(mrkdwnToHtml('<https://example.com|Example>')).toBe(
-        '<a href="https://example.com">Example</a>'
-      );
-    });
-
-    it('should convert bare links', () => {
-      expect(mrkdwnToHtml('<https://example.com>')).toBe(
-        '<a href="https://example.com">https://example.com</a>'
-      );
-    });
-
-    it('should not convert special Slack tokens', () => {
-      expect(mrkdwnToHtml('<!here>')).toBe('&lt;!here&gt;');
-      expect(mrkdwnToHtml('<@U123>')).toBe('&lt;@U123&gt;');
-      expect(mrkdwnToHtml('<#C123>')).toBe('&lt;#C123&gt;');
-    });
-
-    it('should handle links with special characters', () => {
-      expect(mrkdwnToHtml('<https://example.com/path?query=value&foo=bar|Link>')).toBe(
-        '<a href="https://example.com/path?query=value&amp;foo=bar">Link</a>'
-      );
-    });
-  });
-
-  describe('code formatting', () => {
-    it('should convert backtick-wrapped text to code', () => {
-      expect(mrkdwnToHtml('`code`')).toBe('<code>code</code>');
-    });
-
-    it('should handle multiple code segments', () => {
-      expect(mrkdwnToHtml('`foo` and `bar`')).toBe('<code>foo</code> and <code>bar</code>');
-    });
-
-    it('should preserve HTML entities in code', () => {
-      expect(mrkdwnToHtml('<div>')).toBe('&lt;div&gt;');
-    });
-  });
-
-  describe('strikethrough formatting', () => {
-    it('should convert tilde-wrapped text to strikethrough', () => {
-      expect(mrkdwnToHtml('~deleted~')).toBe('<s>deleted</s>');
-    });
-
-    it('should handle multiple strikethrough segments', () => {
-      expect(mrkdwnToHtml('~old~ and ~gone~')).toBe('<s>old</s> and <s>gone</s>');
-    });
-  });
-
-  describe('newline handling', () => {
-    it('should convert newlines to br tags', () => {
-      expect(mrkdwnToHtml('line 1\nline 2')).toBe('line 1<br>line 2');
-    });
-
-    it('should handle multiple consecutive newlines', () => {
-      expect(mrkdwnToHtml('line 1\n\nline 2')).toBe('line 1<br><br>line 2');
-    });
-  });
-
-  describe('combined formatting', () => {
-    it('should handle bold and italic together', () => {
-      expect(mrkdwnToHtml('*bold* and _italic_')).toBe('<b>bold</b> and <i>italic</i>');
-    });
-
-    it('should handle links with formatting', () => {
-      expect(mrkdwnToHtml('<https://example.com|*Click here*>')).toBe(
-        '<a href="https://example.com">*Click here*</a>'
-      );
-    });
-
-    it('should handle complex mixed formatting', () => {
-      expect(mrkdwnToHtml('*Bold* with `code` and <https://example.com|link>')).toBe(
-        '<b>Bold</b> with <code>code</code> and <a href="https://example.com">link</a>'
-      );
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should return empty string for undefined', () => {
-      expect(mrkdwnToHtml(undefined as unknown as string)).toBe('');
-    });
-
-    it('should return empty string for null', () => {
-      expect(mrkdwnToHtml(null as unknown as string)).toBe('');
-    });
-
-    it('should handle empty string', () => {
-      expect(mrkdwnToHtml('')).toBe('');
-    });
-
-    it('should escape HTML before formatting', () => {
-      expect(mrkdwnToHtml('<script>*xss*</script>')).toBe(
-        '&lt;script&gt;<b>xss</b>&lt;/script&gt;'
-      );
-    });
-  });
-});
 
 // ============================================================================
 // Block Kit Parser Tests
@@ -246,7 +33,6 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<p>Section text</p>');
       expect(result.text).toContain('Section text');
     });
 
@@ -265,10 +51,8 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<ul>');
-      expect(result.html).toContain('<li><b>Value 1</b></li>');
-      expect(result.html).toContain('<li><b>Value 2</b></li>');
-      expect(result.html).toContain('</ul>');
+      expect(result.text).toContain('Field 1: Value 1');
+      expect(result.text).toContain('Field 2: Value 2');
     });
 
     it('should parse section with text and fields', () => {
@@ -286,9 +70,8 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<p><b>Header</b></p>');
-      expect(result.html).toContain('<ul>');
-      expect(result.html).toContain('<li><b>Field value</b></li>');
+      expect(result.text).toContain('*Header*');
+      expect(result.text).toContain('- Field value');
     });
   });
 
@@ -305,23 +88,7 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<h3>Important Header</h3>');
       expect(result.text).toContain('## Important Header');
-    });
-
-    it('should escape HTML in header text', () => {
-      const payload: SlackPayload = {
-        blocks: [
-          {
-            type: 'header',
-            text: { type: 'plain_text', text: '<script>alert(1)</script>' }
-          }
-        ]
-      };
-
-      const result = transformSlackToMatrix(payload);
-
-      expect(result.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     });
   });
 
@@ -341,26 +108,7 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<br><small>');
-      expect(result.html).toContain('</small>');
       expect(result.text).toContain('Metadata More info');
-    });
-
-    it('should handle context block with formatting', () => {
-      const payload: SlackPayload = {
-        blocks: [
-          {
-            type: 'context',
-            elements: [
-              { type: 'mrkdwn', text: '*Bold* context' }
-            ]
-          }
-        ]
-      };
-
-      const result = transformSlackToMatrix(payload);
-
-      expect(result.html).toContain('<b>Bold</b>');
     });
   });
 
@@ -376,7 +124,6 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<hr>');
       expect(result.text).toContain('---');
     });
   });
@@ -395,10 +142,8 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<img src="https://example.com/image.png"');
-      expect(result.html).toContain('alt="Example image"');
-      expect(result.html).toContain('<br>');
       expect(result.text).toContain('[Image: Example image]');
+      expect(result.text).toContain('https://example.com/image.png');
     });
 
     it('should handle image block without alt text', () => {
@@ -413,7 +158,6 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('alt="Image"');
       expect(result.text).toContain('[Image: Image]');
     });
   });
@@ -431,7 +175,7 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).not.toContain('Should be ignored');
+      expect(result.text).not.toContain('Should be ignored');
       expect(result.text).toBe('Received empty Slack payload');
     });
   });
@@ -456,9 +200,9 @@ describe('Block Kit parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<h3>Title</h3>');
-      expect(result.html).toContain('<p>Content</p>');
-      expect(result.html).toContain('<hr>');
+      expect(result.text).toContain('## Title');
+      expect(result.text).toContain('Content');
+      expect(result.text).toContain('---');
     });
   });
 });
@@ -482,7 +226,6 @@ describe('Legacy attachment parsing', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.text).toContain('🔴 Error occurred');
-      expect(result.html).toContain('🔴');
     });
 
     it('should map good color to green circle', () => {
@@ -595,17 +338,9 @@ describe('Legacy attachment parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<p>Pre-text appears above</p>');
-      expect(result.html).toContain('<h4>');
-      expect(result.html).toContain('href="https://example.com"');
-      expect(result.html).toContain('Attachment Title</a>');
-      expect(result.html).toContain('<p>Main content goes here</p>');
-      expect(result.html).toContain('<ul>');
-      expect(result.html).toContain('<li><b>Field 1:</b> Value 1</li>');
-      expect(result.html).toContain('<li><b>Field 2:</b> Value 2</li>');
-
       expect(result.text).toContain('Pre-text appears above');
       expect(result.text).toContain('Attachment Title');
+      expect(result.text).toContain('https://example.com');
       expect(result.text).toContain('Main content goes here');
       expect(result.text).toContain('Field 1: Value 1');
       expect(result.text).toContain('Field 2: Value 2');
@@ -622,8 +357,8 @@ describe('Legacy attachment parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<h4>Plain title</h4>');
-      expect(result.html).not.toContain('<a href');
+      expect(result.text).toContain('Plain title');
+      expect(result.text).not.toContain('<');
     });
 
     it('should parse attachment with fields only', () => {
@@ -639,7 +374,6 @@ describe('Legacy attachment parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<li><b>Status:</b> Active</li>');
       expect(result.text).toContain('Status: Active');
     });
 
@@ -656,55 +390,7 @@ describe('Legacy attachment parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<li>Just a value</li>');
-      expect(result.text).toContain(': Just a value');
-    });
-  });
-
-  describe('mrkdwn in attachments', () => {
-    it('should parse mrkdwn in attachment text', () => {
-      const payload: SlackPayload = {
-        attachments: [
-          {
-            text: '*Bold* and `code` in attachment'
-          }
-        ]
-      };
-
-      const result = transformSlackToMatrix(payload);
-
-      expect(result.html).toContain('<b>Bold</b>');
-      expect(result.html).toContain('<code>code</code>');
-    });
-
-    it('should parse mrkdwn in attachment fields', () => {
-      const payload: SlackPayload = {
-        attachments: [
-          {
-            fields: [
-              { value: '*Important* value' }
-            ]
-          }
-        ]
-      };
-
-      const result = transformSlackToMatrix(payload);
-
-      expect(result.html).toContain('<b>Important</b>');
-    });
-
-    it('should parse mrkdwn in attachment pretext', () => {
-      const payload: SlackPayload = {
-        attachments: [
-          {
-            pretext: '<https://example.com|Link text>'
-          }
-        ]
-      };
-
-      const result = transformSlackToMatrix(payload);
-
-      expect(result.html).toContain('<a href="https://example.com">Link text</a>');
+      expect(result.text).toContain('- Just a value');
     });
   });
 
@@ -725,8 +411,6 @@ describe('Legacy attachment parsing', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('🟢 First attachment');
-      expect(result.html).toContain('🔴 Second attachment');
       expect(result.text).toContain('🟢 First attachment');
       expect(result.text).toContain('🔴 Second attachment');
     });
@@ -757,9 +441,8 @@ describe('transformSlackToMatrix', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('Block content');
-      expect(result.html).toContain('Attachment content');
       expect(result.text).toContain('Block content');
+      expect(result.text).toContain('Attachment content');
       expect(result.text).not.toContain('Fallback text');
     });
 
@@ -775,7 +458,6 @@ describe('transformSlackToMatrix', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('Attachment content');
       expect(result.text).toContain('Attachment content');
       expect(result.text).not.toContain('Fallback text');
     });
@@ -787,7 +469,6 @@ describe('transformSlackToMatrix', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('Simple message');
       expect(result.text).toBe('Simple message');
     });
 
@@ -797,7 +478,6 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.text).toBe('Received empty Slack payload');
-      expect(result.html).toBeUndefined();
     });
   });
 
@@ -811,16 +491,6 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.username).toBe('TestBot');
-    });
-
-    it('should use default username when not specified', () => {
-      const payload: SlackPayload = {
-        text: 'Message'
-      };
-
-      const result = transformSlackToMatrix(payload);
-
-      expect(result.username).toBe('SlackBridge');
     });
   });
 
@@ -847,10 +517,11 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.username).toBe('GitHub');
-      expect(result.html).toContain('🟢');
-      expect(result.html).toContain('href="https://github.com/repo/commit/abc123"');
-      expect(result.html).toContain('Repository:</b> user/repo');
-      expect(result.html).toContain('Branch:</b> main');
+      expect(result.text).toContain('🟢');
+      expect(result.text).toContain('New commit in repository');
+      expect(result.text).toContain('https://github.com/repo/commit/abc123');
+      expect(result.text).toContain('Repository: user/repo');
+      expect(result.text).toContain('Branch: main');
       expect(result.text).toContain('Added new feature for authentication');
     });
 
@@ -873,9 +544,9 @@ describe('transformSlackToMatrix', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('🔴 CRITICAL - Service Down');
-      expect(result.html).toContain('<b>Incident:</b> #12345');
-      expect(result.html).toContain('<b>Service:</b> api-production');
+      expect(result.text).toContain('🔴 CRITICAL - Service Down');
+      expect(result.text).toContain('Incident: #12345');
+      expect(result.text).toContain('Service: api-production');
       expect(result.text).toContain('API health check failed');
     });
 
@@ -920,13 +591,11 @@ describe('transformSlackToMatrix', () => {
 
       const result = transformSlackToMatrix(payload);
 
-      expect(result.html).toContain('<h3>Quarterly Report</h3>');
-      expect(result.html).toContain('<b>Q4 2024</b>');
-      expect(result.html).toContain('<li><b>Revenue</b></li>');
-      expect(result.html).toContain('$1.2M');
-      expect(result.html).toContain('<hr>');
-      expect(result.html).toContain('<small>');
-      expect(result.html).toContain('href="https://dashboard.example.com"');
+      expect(result.text).toContain('## Quarterly Report');
+      expect(result.text).toContain('*Q4 2024*');
+      expect(result.text).toContain('Revenue: $1.2M');
+      expect(result.text).toContain('---');
+      expect(result.text).toContain('Generated by');
       expect(result.username).toBe('NotificationBot');
     });
   });
