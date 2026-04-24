@@ -531,8 +531,9 @@ describe('transformSlackToMatrix', () => {
       expect(result.text).toContain('Source msgtype: m.notice');
       expect(result.format).toBe('org.matrix.custom.html');
       expect(result.formatted_body).not.toContain('&lt;https://example.com/issues/1|Issue Link&gt;');
-      expect(result.formatted_body).toMatch(
-        /<a href="https:\/\/example\.com\/issues\/1">\s*Issue Link\s*<\/a>/
+      expect(result.formatted_body).toContain('Issue Link');
+      expect(result.formatted_body).toContain(
+        '<a href="https://example.com/issues/1">https://example.com/issues/1</a>'
       );
     });
 
@@ -565,6 +566,21 @@ describe('transformSlackToMatrix', () => {
 
       expect(result.external_url).toBe('https://example.com/issues/1');
       expect(result.text).toContain('Upstream source: https://example.com/issues/1');
+    });
+
+    it('should normalize webhook error links into quoted code and keep source URL', () => {
+      const payload: SlackPayload = {
+        content: {
+          body: '## NEW issue\n<http://localhost:8000/issues/issue/45ecde28-1988-43a0-9514-c0a1e61e73ad/event/last/|TypeError: unhashable type: \'dict\'>'
+        }
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('## NEW issue');
+      expect(result.text).toContain('> `TypeError: unhashable type: \'dict\'`');
+      expect(result.external_url).toBe('http://localhost:8000/issues/issue/45ecde28-1988-43a0-9514-c0a1e61e73ad/event/last/');
+      expect(result.formatted_body).toContain('&gt; `TypeError: unhashable type: &#39;dict&#39;`');
     });
   });
 

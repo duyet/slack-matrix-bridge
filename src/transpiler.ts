@@ -299,7 +299,9 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
 
 function extractBestEffortText(payload: SlackPayload): string {
   if (payload.text) return payload.text;
-  if (payload.content?.body) return cleanupUndefinedArtifacts(payload.content.body);
+  if (payload.content?.body) {
+    return normalizeWebhookBodyText(cleanupUndefinedArtifacts(payload.content.body));
+  }
 
   const hookshotData = payload.content?.[WEBHOOK_DATA_KEY];
   if (
@@ -308,7 +310,7 @@ function extractBestEffortText(payload: SlackPayload): string {
     'text' in hookshotData &&
     typeof hookshotData.text === 'string'
   ) {
-    return cleanupUndefinedArtifacts(hookshotData.text);
+    return normalizeWebhookBodyText(cleanupUndefinedArtifacts(hookshotData.text));
   }
 
   return '';
@@ -323,6 +325,10 @@ function cleanupUndefinedArtifacts(input: string): string {
 }
 
 function extractSourceUrl(payload: SlackPayload, text: string): string | undefined {
+  const rawContentBody = payload.content?.body ?? '';
+  const fromRawSlackStyleLink = rawContentBody.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
+  if (fromRawSlackStyleLink) return fromRawSlackStyleLink;
+
   const fromSlackStyleLink = text.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
   if (fromSlackStyleLink) return fromSlackStyleLink;
 
@@ -408,6 +414,18 @@ function escapeHtml(input: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function normalizeWebhookBodyText(input: string): string {
+  return input
+    .replace(/<(https?:\/\/[^|>\s]+)\|([^>]+)>/g, (_match, url: string, label: string) => {
+      const normalizedLabel = label.trim();
+      if (/(error|exception|timeout|traceback)/i.test(normalizedLabel)) {
+        return `> \`${normalizedLabel}\``;
+      }
+      return normalizedLabel;
+    })
+    .replace(/<(https?:\/\/[^>\s]+)>/g, (_match, url: string) => url);
 }
 
 // ============================================================================
