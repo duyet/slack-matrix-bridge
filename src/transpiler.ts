@@ -46,16 +46,32 @@ export interface SlackPayload {
   username?: string;
   blocks?: SlackBlock[];
   attachments?: SlackAttachment[];
+  content?: {
+    body?: string;
+    formatted_body?: string;
+    msgtype?: string;
+    [key: string]: unknown;
+  };
+  event_id?: string;
+  room_id?: string;
+  sender?: string;
+  origin_server_ts?: number;
 }
 
 export interface MatrixPayload {
   text: string;
   username?: string;
+  msgtype?: 'm.notice' | 'm.text';
+  format?: 'org.matrix.custom.html';
+  formatted_body?: string;
+  external_url?: string;
 }
 
 interface TranspilerResult {
   text: string;
 }
+
+const WEBHOOK_DATA_KEY = 'uk.half-shot.hookshot.webhook_data';
 
 // ============================================================================
 // Block Kit Parser
@@ -259,17 +275,113 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
 
   // Priority 3: Fallback to top-level text
   // Only used if blocks/attachments didn't produce any content
-  if (!text.trim() && payload.text) {
-    text = payload.text;
+  if (!text.trim()) {
+    text = extractBestEffortText(payload);
   }
 
   // Ensure we always have fallback text
-  const fallbackText = text.trim() || 'Received empty Slack payload';
+  const cleanedText = cleanupUndefinedArtifacts(text);
+  const fallbackText = cleanedText.trim() || 'Received empty Slack payload';
+  const sourceUrl = extractSourceUrl(payload, fallbackText);
+  const metadata = collectMetadata(payload);
+  const fullText = appendMetadata(fallbackText, sourceUrl, metadata);
+  const formattedBody = renderHtml(fullText);
 
   return {
-    text: fallbackText,
+    text: fullText,
+    msgtype: 'm.notice',
+    format: 'org.matrix.custom.html',
+    formatted_body: formattedBody,
+    ...(sourceUrl && { external_url: sourceUrl }),
     ...(payload.username && { username: payload.username })
   };
+}
+
+function extractBestEffortText(payload: SlackPayload): string {
+  if (payload.text) return payload.text;
+  if (payload.content?.body) return payload.content.body;
+
+  const hookshotData = payload.content?.[WEBHOOK_DATA_KEY];
+  if (
+    hookshotData &&
+    typeof hookshotData === 'object' &&
+    'text' in hookshotData &&
+    typeof hookshotData.text === 'string'
+  ) {
+    return hookshotData.text;
+  }
+
+  return '';
+}
+
+function cleanupUndefinedArtifacts(input: string): string {
+  return input
+    .split('\n')
+    .filter((line) => !/^\s*[-*]?\s*undefined\s*$/i.test(line))
+    .join('\n')
+    .trim();
+}
+
+function extractSourceUrl(payload: SlackPayload, text: string): string | undefined {
+  const fromSlackStyleLink = text.match(/<((?:https?:\/\/|http:\/\/)[^|>]+)\|[^>]+>/i)?.[1];
+  if (fromSlackStyleLink) return fromSlackStyleLink;
+
+  const fromPlainUrl = text.match(/\bhttps?:\/\/[^\s)>]+/i)?.[0];
+  if (fromPlainUrl) return fromPlainUrl;
+
+  const formattedBody = payload.content?.formatted_body;
+  if (formattedBody) {
+    const href = formattedBody.match(/href="([^"]+)"/i)?.[1];
+    if (href) return href;
+  }
+
+  return undefined;
+}
+
+function collectMetadata(payload: SlackPayload): Record<string, string> {
+  const metadata: Record<string, string> = {};
+
+  if (payload.event_id) metadata['Event ID'] = payload.event_id;
+  if (payload.room_id) metadata['Room ID'] = payload.room_id;
+  if (payload.sender) metadata['Sender'] = payload.sender;
+  if (payload.origin_server_ts) {
+    metadata['Timestamp'] = new Date(payload.origin_server_ts).toISOString();
+  }
+  if (payload.content?.msgtype) metadata['Source msgtype'] = payload.content.msgtype;
+
+  return metadata;
+}
+
+function appendMetadata(
+  text: string,
+  sourceUrl: string | undefined,
+  metadata: Record<string, string>
+): string {
+  const lines: string[] = [];
+
+  if (sourceUrl) lines.push(`Upstream source: ${sourceUrl}`);
+  for (const [key, value] of Object.entries(metadata)) {
+    lines.push(`${key}: ${value}`);
+  }
+
+  if (lines.length === 0) return text;
+  return `${text}\n\n---\n${lines.join('\n')}`;
+}
+
+function renderHtml(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const withLinks = escaped.replace(
+    /\b(https?:\/\/[^\s<]+)/g,
+    '<a href="$1">$1</a>'
+  );
+
+  return withLinks.replace(/\n/g, '<br/>');
 }
 
 // ============================================================================
