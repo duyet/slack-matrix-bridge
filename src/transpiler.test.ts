@@ -479,6 +479,20 @@ describe('transformSlackToMatrix', () => {
 
       expect(result.text).toBe('Received empty Slack payload');
     });
+
+    it('should remove undefined artifact lines from body content', () => {
+      const payload: SlackPayload = {
+        content: {
+          body: '## NEW issue\n- undefined\nActual message'
+        }
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('## NEW issue');
+      expect(result.text).toContain('Actual message');
+      expect(result.text).not.toContain('- undefined');
+    });
   });
 
   describe('username handling', () => {
@@ -491,6 +505,66 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.username).toBe('TestBot');
+    });
+  });
+
+  describe('metadata enrichment', () => {
+    it('should append source URL and only safe metadata in normal mode', () => {
+      const payload: SlackPayload = {
+        content: {
+          body: '<https://example.com/issues/1|Issue Link>',
+          msgtype: 'm.notice'
+        },
+        event_id: '$event123',
+        room_id: '!room:example.com',
+        sender: '@bot:example.com',
+        origin_server_ts: 1714564800000
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.external_url).toBe('https://example.com/issues/1');
+      expect(result.text).toContain('Upstream source: https://example.com/issues/1');
+      expect(result.text).not.toContain('Event ID: $event123');
+      expect(result.text).not.toContain('Room ID: !room:example.com');
+      expect(result.text).not.toContain('Sender: @bot:example.com');
+      expect(result.text).toContain('Source msgtype: m.notice');
+      expect(result.format).toBe('org.matrix.custom.html');
+      expect(result.formatted_body).not.toContain('&lt;https://example.com/issues/1|Issue Link&gt;');
+      expect(result.formatted_body).toMatch(
+        /<a href="https:\/\/example\.com\/issues\/1">\s*Issue Link\s*<\/a>/
+      );
+    });
+
+    it('should include internal IDs only when debug metadata mode is enabled', () => {
+      const payload: SlackPayload = {
+        enableDebugMetadata: true,
+        content: {
+          body: '<https://example.com/issues/1|Issue Link>',
+          msgtype: 'm.notice'
+        },
+        event_id: '$event123',
+        room_id: '!room:example.com',
+        sender: '@bot:example.com',
+        origin_server_ts: 1714564800000
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('Event ID: $event123');
+      expect(result.text).toContain('Room ID: !room:example.com');
+      expect(result.text).toContain('Sender: @bot:example.com');
+    });
+
+    it('should trim trailing punctuation from extracted source URLs', () => {
+      const payload: SlackPayload = {
+        text: 'See details at https://example.com/issues/1,'
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.external_url).toBe('https://example.com/issues/1');
+      expect(result.text).toContain('Upstream source: https://example.com/issues/1');
     });
   });
 
