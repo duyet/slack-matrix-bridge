@@ -44,6 +44,7 @@ interface SlackAttachment {
 export interface SlackPayload {
   text?: string;
   username?: string;
+  enableDebugMetadata?: boolean;
   blocks?: SlackBlock[];
   attachments?: SlackAttachment[];
   content?: {
