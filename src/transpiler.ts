@@ -325,8 +325,8 @@ function cleanupUndefinedArtifacts(input: string): string {
 }
 
 function extractSourceUrl(payload: SlackPayload, text: string): string | undefined {
-  const rawContentBody = payload.content?.body ?? '';
-  const fromRawSlackStyleLink = rawContentBody.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
+  const rawWebhookText = getRawWebhookText(payload);
+  const fromRawSlackStyleLink = rawWebhookText.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
   if (fromRawSlackStyleLink) return fromRawSlackStyleLink;
 
   const fromSlackStyleLink = text.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
@@ -426,6 +426,22 @@ function normalizeWebhookBodyText(input: string): string {
       return normalizedLabel;
     })
     .replace(/<(https?:\/\/[^>\s]+)>/g, (_match, url: string) => url);
+}
+
+function getRawWebhookText(payload: SlackPayload): string {
+  if (payload.content?.body) return payload.content.body;
+
+  const hookshotData = payload.content?.[WEBHOOK_DATA_KEY];
+  if (
+    hookshotData &&
+    typeof hookshotData === 'object' &&
+    'text' in hookshotData &&
+    typeof hookshotData.text === 'string'
+  ) {
+    return hookshotData.text;
+  }
+
+  return payload.text ?? '';
 }
 
 // ============================================================================

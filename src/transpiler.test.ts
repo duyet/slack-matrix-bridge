@@ -582,6 +582,21 @@ describe('transformSlackToMatrix', () => {
       expect(result.external_url).toBe('http://localhost:8000/issues/issue/45ecde28-1988-43a0-9514-c0a1e61e73ad/event/last/');
       expect(result.formatted_body).toContain('&gt; `TypeError: unhashable type: &#39;dict&#39;`');
     });
+
+    it('should extract source URL from hookshot webhook_data text payload', () => {
+      const payload: SlackPayload = {
+        content: {
+          'uk.half-shot.hookshot.webhook_data': {
+            text: '<http://localhost:8000/issues/issue/abc/event/last/|HTTPException: failed>'
+          }
+        }
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.external_url).toBe('http://localhost:8000/issues/issue/abc/event/last/');
+      expect(result.text).toContain('Upstream source: http://localhost:8000/issues/issue/abc/event/last/');
+    });
   });
 
   describe('complex real-world scenarios', () => {
