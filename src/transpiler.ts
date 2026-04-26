@@ -281,10 +281,9 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
   }
 
   // Ensure we always have fallback text
-  const cleanedText = cleanupUndefinedArtifacts(text);
-  const fallbackText = cleanedText.trim() || 'Received empty Slack payload';
+  const fallbackText = text.trim() || 'Received empty Slack payload';
   const sourceUrl = extractSourceUrl(payload, fallbackText);
-  const metadata = collectMetadata(payload);
+  const metadata = collectMetadata(payload, Boolean(payload.enableDebugMetadata));
   const fullText = appendMetadata(fallbackText, sourceUrl, metadata);
   const formattedBody = renderHtml(fullText);
 
