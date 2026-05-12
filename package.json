@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Slack to Matrix messaging bridge on Cloudflare Workers",
   "main": "src/index.ts",
+  "type": "module",
   "scripts": {
     "dev": "bun run wrangler dev",
     "deploy": "bun run wrangler deploy",

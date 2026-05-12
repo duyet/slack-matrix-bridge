@@ -597,6 +597,20 @@ describe('transformSlackToMatrix', () => {
       expect(result.external_url).toBe('http://localhost:8000/issues/issue/abc/event/last/');
       expect(result.text).toContain('Upstream source: http://localhost:8000/issues/issue/abc/event/last/');
     });
+
+    it('should ignore non-http source URLs from formatted body metadata', () => {
+      const payload: SlackPayload = {
+        content: {
+          body: 'Fallback body text',
+          formatted_body: '<a href="javascript:alert(1)">click</a>'
+        }
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.external_url).toBeUndefined();
+      expect(result.text).not.toContain('Upstream source:');
+    });
   });
 
   describe('complex real-world scenarios', () => {

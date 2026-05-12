@@ -158,6 +158,27 @@ bun run test:run
 bun run test:coverage
 ```
 
+## Automation Workflow Commands
+
+Use these commands for code-smell and dead-code automation runs:
+
+```bash
+# 1) Find commit scope since last automation run (or last 24h fallback)
+git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
+
+# 2) Prove dead code with zero references (exclude tests)
+rg -n "<symbol_name>" src --glob '!**/*.test.ts' --glob '!tests/**'
+
+# 3) Verify before PR
+bun run test:run
+bun run typecheck
+
+# 4) PR + review loop
+gh pr create --fill
+gh pr comment --body "@codex review"
+gh pr checks --watch
+```
+
 ## Testing Strategy
 
 ### Test Files
