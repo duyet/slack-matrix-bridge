@@ -12,20 +12,20 @@ Use this loop for routine code-smell and dead-code passes:
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
 ```
 
-2. Prove dead code candidates with zero non-test references:
+1. Prove dead code candidates with zero non-test references:
 
 ```bash
 rg -n "<symbol_name>" src --glob '!**/*.test.ts' --glob '!tests/**'
 ```
 
-3. Verify before PR:
+1. Verify before PR:
 
 ```bash
 bun run test:run
 bun run typecheck
 ```
 
-4. Open and babysit PR:
+1. Open and babysit PR:
 
 ```bash
 gh pr create --fill
