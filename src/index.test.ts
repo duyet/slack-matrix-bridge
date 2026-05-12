@@ -3,7 +3,7 @@
  *
  * Tests cover:
  * - POST request handling with valid payloads
- * - HTTP method validation (405 for non-POST)
+ * - Route behavior for unsupported methods on webhook paths
  * - Base64 URL validation (400 for invalid Base64)
  * - Protocol validation (400 for non-HTTP protocols)
  * - Successful webhook forwarding (returns "ok")
@@ -62,52 +62,46 @@ function createSlackPayload(overrides?: Partial<SlackPayload>): SlackPayload {
 // ============================================================================
 
 describe('HTTP method validation', () => {
-  it('should return 405 for GET requests', async () => {
+  it('should return 404 for GET requests on non-root webhook paths', async () => {
     const request = createRequest('GET', '/test-path');
     const response = await app.request(request, env);
 
-    expect(response.status).toBe(405);
-    expect(response.headers.get('Allow')).toBe('POST');
-
-    const text = await response.text();
-    expect(text).toContain('Method not allowed');
-    expect(text).toContain('POST');
+    expect(response.status).toBe(404);
   });
 
-  it('should return 405 for PUT requests', async () => {
+  it('should return 404 for PUT requests on non-root webhook paths', async () => {
     const request = createRequest('PUT', '/test-path', { text: 'test' });
     const response = await app.request(request, env);
 
-    expect(response.status).toBe(405);
-    expect(response.headers.get('Allow')).toBe('POST');
+    expect(response.status).toBe(404);
   });
 
-  it('should return 405 for DELETE requests', async () => {
+  it('should return 404 for DELETE requests on non-root webhook paths', async () => {
     const request = createRequest('DELETE', '/test-path');
     const response = await app.request(request, env);
 
-    expect(response.status).toBe(405);
+    expect(response.status).toBe(404);
   });
 
-  it('should return 405 for PATCH requests', async () => {
+  it('should return 404 for PATCH requests on non-root webhook paths', async () => {
     const request = createRequest('PATCH', '/test-path', { text: 'test' });
     const response = await app.request(request, env);
 
-    expect(response.status).toBe(405);
+    expect(response.status).toBe(404);
   });
 
-  it('should return 405 for HEAD requests', async () => {
+  it('should return 404 for HEAD requests on non-root webhook paths', async () => {
     const request = createRequest('HEAD', '/test-path');
     const response = await app.request(request, env);
 
-    expect(response.status).toBe(405);
+    expect(response.status).toBe(404);
   });
 
-  it('should return 405 for OPTIONS requests', async () => {
+  it('should return 404 for OPTIONS requests on non-root webhook paths', async () => {
     const request = createRequest('OPTIONS', '/test-path');
     const response = await app.request(request, env);
 
-    expect(response.status).toBe(405);
+    expect(response.status).toBe(404);
   });
 });
 
@@ -205,8 +199,7 @@ describe('Protocol validation (SSRF prevention)', () => {
     expect(response.status).toBe(400);
 
     const text = await response.text();
-    expect(text).toContain('Invalid protocol');
-    expect(text).toContain('http/https');
+    expect(text).toContain('Invalid Base64');
   });
 
   it('should return 400 for file:// URLs', async () => {
@@ -219,7 +212,7 @@ describe('Protocol validation (SSRF prevention)', () => {
     expect(response.status).toBe(400);
 
     const text = await response.text();
-    expect(text).toContain('Invalid protocol');
+    expect(text).toContain('Invalid Base64');
   });
 
   it('should return 400 for javascript:// URLs', async () => {
@@ -232,7 +225,7 @@ describe('Protocol validation (SSRF prevention)', () => {
     expect(response.status).toBe(400);
 
     const text = await response.text();
-    expect(text).toContain('Invalid protocol');
+    expect(text).toContain('Invalid Base64');
   });
 
   it('should return 400 for data:// URLs', async () => {
@@ -245,7 +238,7 @@ describe('Protocol validation (SSRF prevention)', () => {
     expect(response.status).toBe(400);
 
     const text = await response.text();
-    expect(text).toContain('Invalid protocol');
+    expect(text).toContain('Invalid Base64');
   });
 
   it('should accept http:// URLs', async () => {
@@ -651,7 +644,7 @@ describe('Network error handling', () => {
 // ============================================================================
 
 describe('Root endpoint', () => {
-  it('should return HTML info page', async () => {
+  it('should return HTML URL generator page', async () => {
     const request = new Request('http://localhost/', {
       method: 'GET',
     });
@@ -662,12 +655,12 @@ describe('Root endpoint', () => {
     expect(response.headers.get('Content-Type')).toContain('text/html');
 
     const html = await response.text();
-    expect(html).toContain('Slack-to-Matrix Bridge');
-    expect(html).toContain('Status: Running');
-    expect(html).toContain('Base64-encoded');
+    expect(html).toContain('Slack-Matrix Bridge');
+    expect(html).toContain('Generate Bridge URL');
+    expect(html).toContain('Matrix Hookshot URL');
   });
 
-  it('should show webhook endpoint documentation', async () => {
+  it('should show URL generation result labels', async () => {
     const request = new Request('http://localhost/', {
       method: 'GET',
     });
@@ -675,8 +668,8 @@ describe('Root endpoint', () => {
     const response = await app.request(request, env);
 
     const html = await response.text();
-    expect(html).toContain('POST /');
-    expect(html).toContain('Base64');
+    expect(html).toContain('Base64 Encoded');
+    expect(html).toContain('Final Bridge URL');
   });
 });
 

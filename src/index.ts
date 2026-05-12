@@ -325,25 +325,16 @@ app.get('/', (c) => {
  * Path structure: /<BASE64_ENCODED_MATRIX_WEBHOOK_URL>
  *
  * Request flow:
- * 1. Validate POST method
- * 2. Extract and decode Base64-encoded Matrix URL from path
- * 3. Parse Slack JSON payload
- * 4. Transform to Matrix format using transpiler
- * 5. Forward to Matrix Hookshot
- * 6. Return "Fake Slack" response
+ * 1. Extract and decode Base64-encoded Matrix URL from path
+ * 2. Parse Slack JSON payload
+ * 3. Transform to Matrix format using transpiler
+ * 4. Forward to Matrix Hookshot
+ * 5. Return "Fake Slack" response
  */
 app.post('/*', async (c) => {
   // ==========================================================================
-  // 1. Request Validation and Routing
+  // 1. Request Routing
   // ==========================================================================
-
-  // Slack webhooks are always POST
-  // Return 405 Method Not Allowed for other HTTP methods
-  if (c.req.method !== 'POST') {
-    return c.text('Method not allowed. Please POST to this endpoint.', 405, {
-      Allow: 'POST'
-    });
-  }
 
   // Extract the encoded destination from the URL path
   // Path structure: /<BASE64_DESTINATION_URL>

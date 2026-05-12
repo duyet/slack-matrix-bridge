@@ -327,18 +327,39 @@ function cleanupUndefinedArtifacts(input: string): string {
 function extractSourceUrl(payload: SlackPayload, text: string): string | undefined {
   const rawWebhookText = getRawWebhookText(payload);
   const fromRawSlackStyleLink = rawWebhookText.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
-  if (fromRawSlackStyleLink) return fromRawSlackStyleLink;
+  const validFromRawSlackStyleLink = toHttpUrl(fromRawSlackStyleLink);
+  if (validFromRawSlackStyleLink) return validFromRawSlackStyleLink;
 
   const fromSlackStyleLink = text.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
-  if (fromSlackStyleLink) return fromSlackStyleLink;
+  const validFromSlackStyleLink = toHttpUrl(fromSlackStyleLink);
+  if (validFromSlackStyleLink) return validFromSlackStyleLink;
 
   const fromPlainUrl = text.match(/\bhttps?:\/\/[^\s)>]+/i)?.[0];
-  if (fromPlainUrl) return trimTrailingUrlPunctuation(fromPlainUrl);
+  const validFromPlainUrl = toHttpUrl(
+    fromPlainUrl ? trimTrailingUrlPunctuation(fromPlainUrl) : undefined
+  );
+  if (validFromPlainUrl) return validFromPlainUrl;
 
   const formattedBody = payload.content?.formatted_body;
   if (formattedBody) {
     const href = formattedBody.match(/href="([^"]+)"/i)?.[1];
-    if (href) return href;
+    const validHref = toHttpUrl(href);
+    if (validHref) return validHref;
+  }
+
+  return undefined;
+}
+
+function toHttpUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+  } catch {
+    // Ignore invalid URLs and treat them as missing metadata.
   }
 
   return undefined;

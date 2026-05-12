@@ -1,10 +1,9 @@
-import { defineConfig } from 'vitest/config';
-import { workersPool } from '@cloudflare/vitest-pool-workers';
+import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
 
-export default defineConfig({
+export default defineWorkersConfig({
   test: {
     globals: true,
-    pool: workersPool,
+    pool: '@cloudflare/vitest-pool-workers',
     poolOptions: {
       workers: {
         isolatedStorage: true,
