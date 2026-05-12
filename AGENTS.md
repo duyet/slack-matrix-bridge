@@ -1,11 +1,12 @@
 # Slack-Matrix Bridge Agent Notes
 
 Canonical repo guidance lives in [`CLAUDE.md`](./CLAUDE.md). Keep these two files in sync when workflow commands change.
+Maintenance memory lives in [`docs/knowledge/core-memory.md`](./docs/knowledge/core-memory.md) and is indexed from [`docs/INDEX.md`](./docs/INDEX.md).
 
 ## Automation Workflow Commands
 
 ```bash
-# 1) Find commit scope since last automation run (or last 24h fallback)
+# 1) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
 
 # 2) Prove dead code with zero references (exclude tests)
