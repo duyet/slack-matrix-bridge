@@ -163,7 +163,7 @@ bun run test:coverage
 Use these commands for code-smell and dead-code automation runs:
 
 ```bash
-# 1) Find commit scope since last automation run (or last 24h fallback)
+# 1) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
 
 # 2) Prove dead code with zero references (exclude tests)
@@ -178,6 +178,10 @@ gh pr create --fill
 gh pr comment --body "@codex review"
 gh pr checks --watch
 ```
+
+## Core Maintenance Memory
+
+Keep durable automation notes in [`docs/knowledge/core-memory.md`](./docs/knowledge/core-memory.md) and keep it listed in [`docs/INDEX.md`](./docs/INDEX.md). Do not create dated code-smell/dead-code report files.
 
 ## Testing Strategy
 
