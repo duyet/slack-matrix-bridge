@@ -16,11 +16,14 @@ rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!*
 
 # 3) Verify before PR
 bun audit
-bun run test:run
+XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp bun run test:run
 bun run typecheck
 
 # 4) PR + review loop
 gh pr create --fill
 gh pr comment --body "@codex review"
 gh pr checks --watch
+
+# 5) Verify merge commit CI on main
+gh run list --branch main --commit "<merge_sha>" --json databaseId,name,status,conclusion,url
 ```
