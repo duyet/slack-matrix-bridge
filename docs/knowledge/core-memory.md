@@ -1,6 +1,6 @@
 # Core Maintenance Memory
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 ## Automation Loop
 
@@ -24,7 +24,7 @@ rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!*
 
 ```bash
 bun audit
-bun run test:run
+XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp bun run test:run
 bun run typecheck
 ```
 
@@ -34,6 +34,9 @@ bun run typecheck
 gh pr create --fill
 gh pr comment --body "@codex review"
 gh pr checks --watch
+
+# 5) Verify merge commit CI on main
+gh run list --branch main --commit "<merge_sha>" --json databaseId,name,status,conclusion,url
 ```
 
 ## Durable Rules
