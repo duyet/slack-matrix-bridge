@@ -23,7 +23,7 @@ slack-matrix-bridge/
 ├── src/
 │   ├── index.ts          # Main entry point, routes, webhook handler
 │   ├── transpiler.ts     # Slack → Matrix payload transformation
-│   ├── utils.ts          # Utility functions (escapeHtml, mrkdwnToHtml)
+│   ├── ui.tsx            # Home page HTML renderer
 │   ├── index.test.ts     # Integration tests
 │   └── transpiler.test.ts# Transpiler unit tests
 ├── tests/                # Additional test fixtures
@@ -81,12 +81,6 @@ Core transformation logic converting Slack payloads to Matrix format.
 2. Parse Attachments if present (legacy)
 3. Fallback to top-level text if needed
 4. Always generate both HTML and plain text versions
-
-#### `src/utils.ts`
-
-Utility functions for HTML escaping and mrkdwn conversion.
-
-**Note:** This file duplicates functions from `transpiler.ts`. Consider consolidating or removing duplicates.
 
 ## Key Functions Reference
 
@@ -165,11 +159,14 @@ Use these commands for code-smell and dead-code automation runs:
 ```bash
 # 1) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
+# Fallback when no saved timestamp is available
+git log --since="24 hours ago" --name-only --pretty=format:'%h %ad %s' --date=iso
 
 # 2) Prove dead code with zero references (exclude tests)
-rg -n "<symbol_name>" src --glob '!**/*.test.ts' --glob '!tests/**'
+rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!**/__tests__/**' --glob '!tests/**'
 
 # 3) Verify before PR
+bun audit
 bun run test:run
 bun run typecheck
 
@@ -346,11 +343,10 @@ V8 Isolates enable 0ms cold starts vs ~500ms for container-based Lambda.
 1. **Add rate limiting** to prevent abuse
 2. **Add request metrics** for monitoring
 3. **Add webhook domain restriction** for security
-4. **Consolidate utils.ts** with transpiler.ts
-5. **Add ESLint/Prettier** for consistent formatting
-6. **Add E2E tests** with real Hookshot instance
-7. **Add OpenAPI spec** for webhook endpoint
-8. **Add CI/CD pipeline** for automated testing/deployment
+4. **Add ESLint/Prettier** for consistent formatting
+5. **Add E2E tests** with real Hookshot instance
+6. **Add OpenAPI spec** for webhook endpoint
+7. **Add CI/CD pipeline** for automated testing/deployment
 
 ### Known Limitations
 
