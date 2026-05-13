@@ -8,11 +8,14 @@ Maintenance memory lives in [`docs/knowledge/core-memory.md`](./docs/knowledge/c
 ```bash
 # 1) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
+# Fallback when no saved timestamp is available
+git log --since="24 hours ago" --name-only --pretty=format:'%h %ad %s' --date=iso
 
 # 2) Prove dead code with zero references (exclude tests)
-rg -n "<symbol_name>" src --glob '!**/*.test.ts' --glob '!tests/**'
+rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!**/__tests__/**' --glob '!tests/**'
 
 # 3) Verify before PR
+bun audit
 bun run test:run
 bun run typecheck
 
