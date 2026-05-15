@@ -1,8 +1,10 @@
 import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+import { defaultExclude } from 'vitest/config';
 
 export default defineWorkersConfig({
   test: {
     globals: true,
+    exclude: [...defaultExclude, '**/.bun-cache/**', '**/.bun-tmp/**'],
     pool: '@cloudflare/vitest-pool-workers',
     poolOptions: {
       workers: {

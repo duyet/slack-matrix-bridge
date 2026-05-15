@@ -64,7 +64,7 @@ Core transformation logic converting Slack payloads to Matrix format.
 - `transformSlackToMatrix(payload: SlackPayload): MatrixPayload` - Main entry point
 - `parseBlock(block: SlackBlock): TranspilerResult` - Block Kit parser
 - `parseAttachment(attachment: SlackAttachment): TranspilerResult` - Legacy attachments parser
-- `mrkdwnToHtml(mrkdwn: string): string` - Slack markup to HTML
+- `renderHtml(text: string): string` - Plain text and links to Matrix-safe HTML
 - `escapeHtml(unsafe: string): string` - XSS prevention
 - `isValidBase64Url(encoded: string): boolean` - Base64 validation
 - `decodeMatrixUrl(encodedPath: string): string` - URL-safe Base64 decode
@@ -101,7 +101,7 @@ parseAttachment(attachment: SlackAttachment): TranspilerResult
 mapColorToIcon(color?: string): string
 
 // Format conversion
-mrkdwnToHtml(mrkdwn: string): string
+renderHtml(text: string): string
 escapeHtml(unsafe: string): string
 ```
 
@@ -157,6 +157,11 @@ bun run test:coverage
 Use these commands for code-smell and dead-code automation runs:
 
 ```bash
+# 0) Use writable local cache/temp dirs in sandboxed environments
+mkdir -p .bun-tmp .bun-cache
+export BUN_TMPDIR="$PWD/.bun-tmp"
+export BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache"
+
 # 1) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
 # Fallback when no saved timestamp is available
@@ -385,8 +390,9 @@ bun install
 ### Tests Failing Locally
 
 ```bash
-# Ensure test environment is clean
-bun run test:run
+# Ensure test environment is clean and writable in sandbox
+mkdir -p .bun-tmp .bun-cache
+BUN_TMPDIR="$PWD/.bun-tmp" BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache" bun run test:run
 
 # Check if specific test is failing
 bun test transpiler.test.ts
