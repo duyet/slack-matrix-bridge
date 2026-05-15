@@ -1,6 +1,6 @@
 # Core Maintenance Memory
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 ## Automation Loop
 
@@ -12,6 +12,14 @@ Use this loop for routine code-smell and dead-code passes:
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
 # Fallback when no saved timestamp is available
 git log --since="24 hours ago" --name-only --pretty=format:'%h %ad %s' --date=iso
+```
+
+1. Prepare writable Bun temp/cache dirs for sandboxed runs:
+
+```bash
+mkdir -p .bun-tmp .bun-cache
+export BUN_TMPDIR="$PWD/.bun-tmp"
+export BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache"
 ```
 
 1. Prove dead code candidates with zero non-test references:
@@ -45,4 +53,4 @@ gh run list --branch main --commit "<merge_sha>" --json databaseId,name,status,c
 - Prefer minimal safe fixes over refactors.
 - Do not create dated review documents (for example `code-smell-dead-code-YYYY-MM-DD.md`).
 - Update this file for recurring knowledge instead.
-- If Bun tempdir writes fail in sandboxed environments, run Bun commands with a workspace-local `TMPDIR` and a cache directory outside the repo (for example `/private/tmp/bun-cache`) so Vitest does not discover cached `*.test.*` files.
+- Keep `vitest` scoped to repo tests (exclude local cache/temp directories like `.bun-cache` and `.bun-tmp`).

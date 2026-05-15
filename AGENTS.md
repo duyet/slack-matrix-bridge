@@ -6,6 +6,11 @@ Maintenance memory lives in [`docs/knowledge/core-memory.md`](./docs/knowledge/c
 ## Automation Workflow Commands
 
 ```bash
+# 0) Use writable local cache/temp dirs in sandboxed environments
+mkdir -p .bun-tmp .bun-cache
+export BUN_TMPDIR="$PWD/.bun-tmp"
+export BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache"
+
 # 1) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
 # Fallback when no saved timestamp is available
