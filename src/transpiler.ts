@@ -179,7 +179,12 @@ function mapColorToIcon(color?: string): string {
   const lowerColor = color.toLowerCase();
 
   // 🔴 Danger / Error indicators
-  if (lowerColor === 'danger' || lowerColor.startsWith('#d00000') || lowerColor.startsWith('#ff')) {
+  if (
+    lowerColor === 'danger' ||
+    lowerColor.startsWith('#d00000') ||
+    lowerColor.startsWith('#ff0000') ||
+    lowerColor.startsWith('#f00')
+  ) {
     return '🔴 ';
   }
 
