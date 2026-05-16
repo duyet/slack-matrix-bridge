@@ -22,6 +22,12 @@ export BUN_TMPDIR="$PWD/.bun-tmp"
 export BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache"
 ```
 
+1. Install dependencies in fresh worktrees:
+
+```bash
+bun install
+```
+
 1. Prove dead code candidates with zero non-test references:
 
 ```bash
