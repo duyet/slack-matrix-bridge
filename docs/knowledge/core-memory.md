@@ -1,6 +1,6 @@
 # Core Maintenance Memory
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## Automation Loop
 
@@ -11,7 +11,7 @@ Use this loop for routine code-smell and dead-code passes:
 ```bash
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
 # Fallback when no saved timestamp is available
-git log --since="24 hours ago" --name-only --pretty=format:'%h %ad %s' --date=iso
+git log --since="7 days ago" --name-only --pretty=format:'%h %ad %s' --date=iso
 ```
 
 1. Prepare writable Bun temp/cache dirs for sandboxed runs:

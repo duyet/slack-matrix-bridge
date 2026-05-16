@@ -258,6 +258,21 @@ describe('Legacy attachment parsing', () => {
       expect(result.text).toContain('⚠️ Warning');
     });
 
+    it('should map yellow hex colors to warning emoji', () => {
+      const payload: SlackPayload = {
+        attachments: [
+          {
+            color: '#ffcc00',
+            title: 'Warning'
+          }
+        ]
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('⚠️ Warning');
+    });
+
     it('should map hex colors starting with #d to danger', () => {
       const payload: SlackPayload = {
         attachments: [
@@ -271,6 +286,21 @@ describe('Legacy attachment parsing', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.text).toContain('🔴');
+    });
+
+    it('should keep pure red hex colors as danger', () => {
+      const payload: SlackPayload = {
+        attachments: [
+          {
+            color: '#ff0000',
+            title: 'Error'
+          }
+        ]
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('🔴 Error');
     });
 
     it('should map hex colors starting with #36 to good', () => {
