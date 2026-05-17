@@ -554,14 +554,19 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.external_url).toBe('https://example.com/issues/1');
+      expect(result.text).toContain('Issue Link');
+      expect(result.text).toContain('Debug metadata');
       expect(result.text).toContain('Upstream source: https://example.com/issues/1');
+      expect(result.text).toContain('Timestamp: 2024-05-01T12:00:00.000Z');
+      expect(result.text).toContain('Source msgtype: m.notice');
       expect(result.text).not.toContain('Event ID: $event123');
       expect(result.text).not.toContain('Room ID: !room:example.com');
       expect(result.text).not.toContain('Sender: @bot:example.com');
-      expect(result.text).toContain('Source msgtype: m.notice');
       expect(result.format).toBe('org.matrix.custom.html');
       expect(result.formatted_body).not.toContain('&lt;https://example.com/issues/1|Issue Link&gt;');
       expect(result.formatted_body).toContain('Issue Link');
+      expect(result.formatted_body).toContain('<strong>Debug metadata</strong>');
+      expect(result.formatted_body).toContain('<strong>Upstream source:</strong>');
       expect(result.formatted_body).toContain(
         '<a href="https://example.com/issues/1">https://example.com/issues/1</a>'
       );
@@ -585,6 +590,9 @@ describe('transformSlackToMatrix', () => {
       expect(result.text).toContain('Event ID: $event123');
       expect(result.text).toContain('Room ID: !room:example.com');
       expect(result.text).toContain('Sender: @bot:example.com');
+      expect(result.formatted_body).toContain('<strong>Event ID:</strong> $event123');
+      expect(result.formatted_body).toContain('<strong>Room ID:</strong> !room:example.com');
+      expect(result.formatted_body).toContain('<strong>Sender:</strong> @bot:example.com');
     });
 
     it('should trim trailing punctuation from extracted source URLs', () => {
@@ -610,7 +618,9 @@ describe('transformSlackToMatrix', () => {
       expect(result.text).toContain('## NEW issue');
       expect(result.text).toContain('> `TypeError: unhashable type: \'dict\'`');
       expect(result.external_url).toBe('http://localhost:8000/issues/issue/45ecde28-1988-43a0-9514-c0a1e61e73ad/event/last/');
-      expect(result.formatted_body).toContain('&gt; `TypeError: unhashable type: &#39;dict&#39;`');
+      expect(result.formatted_body).toContain(
+        '<blockquote><code>TypeError: unhashable type: &#39;dict&#39;</code></blockquote>'
+      );
     });
 
     it('should extract source URL from hookshot webhook_data text payload', () => {
@@ -640,6 +650,21 @@ describe('transformSlackToMatrix', () => {
 
       expect(result.external_url).toBeUndefined();
       expect(result.text).not.toContain('Upstream source:');
+      expect(result.formatted_body).not.toContain('javascript:alert');
+    });
+
+    it('should accept formatted body http source URLs when no body URL exists', () => {
+      const payload: SlackPayload = {
+        content: {
+          body: 'Fallback body text',
+          formatted_body: '<a href="https://example.com/source">Source</a>'
+        }
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.external_url).toBe('https://example.com/source');
+      expect(result.text).toContain('Upstream source: https://example.com/source');
     });
   });
 

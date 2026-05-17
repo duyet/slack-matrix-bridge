@@ -1,8 +1,7 @@
 /**
  * Slack-to-Matrix Payload Transpiler
  *
- * Translates Slack Block Kit and legacy attachments into plain text.
- * Raw mrkdwn formatting is passed through for Matrix Hookshot to render.
+ * Translates Slack Block Kit and legacy attachments into Matrix-safe text and HTML.
  */
 
 // ============================================================================
@@ -73,6 +72,13 @@ interface TranspilerResult {
 }
 
 const WEBHOOK_DATA_KEY = 'uk.half-shot.hookshot.webhook_data';
+const DEBUG_METADATA_TITLE = 'Debug metadata';
+
+interface MetadataEntry {
+  label: string;
+  value: string;
+  type?: 'url';
+}
 
 // ============================================================================
 // Block Kit Parser
@@ -258,7 +264,7 @@ function parseAttachment(attachment: SlackAttachment): TranspilerResult {
  * 2. If "attachments" exist, parse them (Legacy format)
  * 3. If "text" exists, use it as fallback (Simple messages)
  *
- * Raw mrkdwn is passed through for Matrix Hookshot to render natively.
+ * Slack links are normalized for Element readability while other mrkdwn is preserved.
  */
 export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
   let text = '';
@@ -285,12 +291,13 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
     text = extractBestEffortText(payload);
   }
 
-  // Ensure we always have fallback text
-  const fallbackText = text.trim() || 'Received empty Slack payload';
+  const cleanedText = cleanupUndefinedArtifacts(text);
+  const fallbackText = cleanedText.trim() || 'Received empty Slack payload';
   const sourceUrl = extractSourceUrl(payload, fallbackText);
-  const metadata = collectMetadata(payload, Boolean(payload.enableDebugMetadata));
-  const fullText = appendMetadata(fallbackText, sourceUrl, metadata);
-  const formattedBody = renderHtml(fullText);
+  const messageText = normalizeMessageText(fallbackText).trim() || 'Received empty Slack payload';
+  const metadata = collectMetadata(payload, sourceUrl, Boolean(payload.enableDebugMetadata));
+  const fullText = appendMetadata(messageText, metadata);
+  const formattedBody = renderHtml(messageText, metadata);
 
   return {
     text: fullText,
@@ -304,9 +311,7 @@ export function transformSlackToMatrix(payload: SlackPayload): MatrixPayload {
 
 function extractBestEffortText(payload: SlackPayload): string {
   if (payload.text) return payload.text;
-  if (payload.content?.body) {
-    return normalizeWebhookBodyText(cleanupUndefinedArtifacts(payload.content.body));
-  }
+  if (payload.content?.body) return payload.content.body;
 
   const hookshotData = payload.content?.[WEBHOOK_DATA_KEY];
   if (
@@ -315,7 +320,7 @@ function extractBestEffortText(payload: SlackPayload): string {
     'text' in hookshotData &&
     typeof hookshotData.text === 'string'
   ) {
-    return normalizeWebhookBodyText(cleanupUndefinedArtifacts(hookshotData.text));
+    return hookshotData.text;
   }
 
   return '';
@@ -330,128 +335,141 @@ function cleanupUndefinedArtifacts(input: string): string {
 }
 
 function extractSourceUrl(payload: SlackPayload, text: string): string | undefined {
-  const rawWebhookText = getRawWebhookText(payload);
-  const fromRawSlackStyleLink = rawWebhookText.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
-  const validFromRawSlackStyleLink = toHttpUrl(fromRawSlackStyleLink);
-  if (validFromRawSlackStyleLink) return validFromRawSlackStyleLink;
+  const candidates = [getRawWebhookText(payload), text];
 
-  const fromSlackStyleLink = text.match(/<(https?:\/\/[^|>]+)\|[^>]+>/i)?.[1];
-  const validFromSlackStyleLink = toHttpUrl(fromSlackStyleLink);
-  if (validFromSlackStyleLink) return validFromSlackStyleLink;
+  for (const candidate of candidates) {
+    const fromSlackStyleLink = candidate.match(/<(https?:\/\/[^|>\s]+)(?:\|[^>]+)?>/i)?.[1];
+    const validSlackStyleLink = normalizeHttpUrl(fromSlackStyleLink);
+    if (validSlackStyleLink) return validSlackStyleLink;
 
-  const fromPlainUrl = text.match(/\bhttps?:\/\/[^\s)>]+/i)?.[0];
-  const validFromPlainUrl = toHttpUrl(
-    fromPlainUrl ? trimTrailingUrlPunctuation(fromPlainUrl) : undefined
-  );
-  if (validFromPlainUrl) return validFromPlainUrl;
+    const fromPlainUrl = candidate.match(/\bhttps?:\/\/[^\s<]+/i)?.[0];
+    const validPlainUrl = normalizeHttpUrl(fromPlainUrl);
+    if (validPlainUrl) return validPlainUrl;
+  }
 
   const formattedBody = payload.content?.formatted_body;
   if (formattedBody) {
-    const href = formattedBody.match(/href="([^"]+)"/i)?.[1];
-    const validHref = toHttpUrl(href);
+    const hrefMatch = formattedBody.match(/\bhref=(?:"([^"]+)"|'([^']+)')/i);
+    const validHref = normalizeHttpUrl(hrefMatch?.[1] ?? hrefMatch?.[2]);
     if (validHref) return validHref;
   }
 
   return undefined;
 }
 
-function toHttpUrl(value: string | undefined): string | undefined {
-  if (!value) return undefined;
+function collectMetadata(
+  payload: SlackPayload,
+  sourceUrl: string | undefined,
+  includeDebugIdentifiers: boolean
+): MetadataEntry[] {
+  const metadata: MetadataEntry[] = [];
 
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      return parsed.toString();
-    }
-  } catch {
-    // Ignore invalid URLs and treat them as missing metadata.
+  if (sourceUrl) {
+    metadata.push({ label: 'Upstream source', value: sourceUrl, type: 'url' });
   }
 
-  return undefined;
-}
-
-function collectMetadata(payload: SlackPayload, includeDebugIdentifiers: boolean): Record<string, string> {
-  const metadata: Record<string, string> = {};
-
-  if (payload.origin_server_ts) {
-    metadata['Timestamp'] = new Date(payload.origin_server_ts).toISOString();
+  const timestamp = formatTimestamp(payload.origin_server_ts);
+  if (timestamp) {
+    metadata.push({ label: 'Timestamp', value: timestamp });
   }
-  if (payload.content?.msgtype) metadata['Source msgtype'] = payload.content.msgtype;
+
+  if (payload.content?.msgtype) {
+    metadata.push({ label: 'Source msgtype', value: payload.content.msgtype });
+  }
+
   if (includeDebugIdentifiers) {
-    if (payload.event_id) metadata['Event ID'] = payload.event_id;
-    if (payload.room_id) metadata['Room ID'] = payload.room_id;
-    if (payload.sender) metadata['Sender'] = payload.sender;
+    if (payload.event_id) metadata.push({ label: 'Event ID', value: payload.event_id });
+    if (payload.room_id) metadata.push({ label: 'Room ID', value: payload.room_id });
+    if (payload.sender) metadata.push({ label: 'Sender', value: payload.sender });
   }
 
   return metadata;
 }
 
-function appendMetadata(
-  text: string,
-  sourceUrl: string | undefined,
-  metadata: Record<string, string>
-): string {
-  const lines: string[] = [];
+function appendMetadata(text: string, metadata: MetadataEntry[]): string {
+  if (metadata.length === 0) return text;
 
-  if (sourceUrl) lines.push(`Upstream source: ${sourceUrl}`);
-  for (const [key, value] of Object.entries(metadata)) {
-    lines.push(`${key}: ${value}`);
+  const lines = metadata.map(({ label, value }) => `${label}: ${value}`);
+  return `${text}\n\n---\n${DEBUG_METADATA_TITLE}\n${lines.join('\n')}`;
+}
+
+function renderHtml(text: string, metadata: MetadataEntry[]): string {
+  const body = renderLines(text);
+  if (metadata.length === 0) return body;
+
+  const metadataHtml = metadata
+    .map((entry) => renderMetadataEntry(entry))
+    .join('<br/>');
+
+  return `${body}<hr/><strong>${DEBUG_METADATA_TITLE}</strong><br/>${metadataHtml}`;
+}
+
+function renderLines(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => renderLine(line))
+    .join('<br/>');
+}
+
+function renderLine(line: string): string {
+  const blockquoteCode = line.match(/^>\s*`([^`]+)`$/);
+  if (blockquoteCode) {
+    return `<blockquote><code>${escapeHtml(blockquoteCode[1])}</code></blockquote>`;
   }
 
-  if (lines.length === 0) return text;
-  return `${text}\n\n---\n${lines.join('\n')}`;
+  if (line === '---') {
+    return '<hr/>';
+  }
+
+  return renderInlineHtml(line);
 }
 
-function renderHtml(text: string): string {
-  const renderedSlackLinks: string[] = [];
-  const textWithoutSlackLinks = text.replace(
-    /<(https?:\/\/[^|>\s]+)(?:\|([^>]+))?>/g,
-    (_match, rawUrl: string, rawLabel?: string) => {
-      const cleanUrl = trimTrailingUrlPunctuation(rawUrl);
-      const label = rawLabel ?? cleanUrl;
-      const anchor = `<a href="${escapeHtml(cleanUrl)}">${escapeHtml(label)}</a>`;
-      renderedSlackLinks.push(anchor);
-      return `___SLACK_LINK_${renderedSlackLinks.length - 1}___`;
-    }
-  );
-
-  const escaped = escapeHtml(textWithoutSlackLinks);
-  const withAutoLinks = escaped.replace(/https?:\/\/[^\s<|]+/g, (candidate) => {
-    const cleanUrl = trimTrailingUrlPunctuation(candidate);
-    const trailing = candidate.slice(cleanUrl.length);
-    return `<a href="${cleanUrl}">${cleanUrl}</a>${trailing}`;
-  });
-
-  const withSlackLinksRestored = withAutoLinks.replace(/___SLACK_LINK_(\d+)___/g, (_match, idx: string) => {
-    return renderedSlackLinks[Number(idx)] ?? '';
-  });
-
-  return withSlackLinksRestored.replace(/\n/g, '<br/>');
+function renderMetadataEntry(entry: MetadataEntry): string {
+  const label = `<strong>${escapeHtml(entry.label)}:</strong>`;
+  const value =
+    entry.type === 'url'
+      ? renderUrl(entry.value, entry.value)
+      : renderInlineHtml(entry.value);
+  return `${label} ${value}`;
 }
 
-function trimTrailingUrlPunctuation(url: string): string {
-  return url.replace(/[.,;)\]>]+$/g, '');
+function renderInlineHtml(input: string): string {
+  const urlPattern = /\bhttps?:\/\/[^\s<]+/gi;
+  let output = '';
+  let cursor = 0;
+
+  for (const match of input.matchAll(urlPattern)) {
+    const rawCandidate = match[0];
+    const index = match.index ?? 0;
+    const cleanUrl = trimTrailingUrlPunctuation(rawCandidate);
+    const trailing = rawCandidate.slice(cleanUrl.length);
+    const validUrl = normalizeHttpUrl(cleanUrl);
+
+    output += escapeHtml(input.slice(cursor, index));
+    output += validUrl
+      ? `${renderUrl(validUrl, cleanUrl)}${escapeHtml(trailing)}`
+      : escapeHtml(rawCandidate);
+    cursor = index + rawCandidate.length;
+  }
+
+  output += escapeHtml(input.slice(cursor));
+  return output;
 }
 
-function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+function renderUrl(url: string, label: string): string {
+  return `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
 }
 
-function normalizeWebhookBodyText(input: string): string {
+function normalizeMessageText(input: string): string {
   return input
     .replace(/<(https?:\/\/[^|>\s]+)\|([^>]+)>/g, (_match, url: string, label: string) => {
-      const normalizedLabel = label.trim();
+      const normalizedLabel = label.trim() || normalizeHttpUrl(url) || '';
       if (/(error|exception|timeout|traceback)/i.test(normalizedLabel)) {
         return `> \`${normalizedLabel}\``;
       }
       return normalizedLabel;
     })
-    .replace(/<(https?:\/\/[^>\s]+)>/g, (_match, url: string) => url);
+    .replace(/<(https?:\/\/[^>\s]+)>/g, (_match, url: string) => normalizeHttpUrl(url) ?? url);
 }
 
 function getRawWebhookText(payload: SlackPayload): string {
@@ -468,6 +486,43 @@ function getRawWebhookText(payload: SlackPayload): string {
   }
 
   return payload.text ?? '';
+}
+
+function formatTimestamp(ts: number | undefined): string | undefined {
+  if (typeof ts !== 'number' || !Number.isFinite(ts)) return undefined;
+
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return undefined;
+
+  return date.toISOString();
+}
+
+function normalizeHttpUrl(rawUrl: string | undefined): string | undefined {
+  if (!rawUrl) return undefined;
+
+  const cleanUrl = trimTrailingUrlPunctuation(rawUrl.trim());
+  try {
+    const parsed = new URL(cleanUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return undefined;
+    }
+    return cleanUrl;
+  } catch {
+    return undefined;
+  }
+}
+
+function trimTrailingUrlPunctuation(url: string): string {
+  return url.replace(/[.,;)\]>"']+$/g, '');
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ============================================================================
