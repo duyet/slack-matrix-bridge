@@ -37,7 +37,7 @@ jobs:
           ANTHROPIC_BASE_URL: https://openrouter.ai/api
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.OPENROUTER_API_KEY }}
         with:
-          anthropic_api_key: ""
+          anthropic_api_key: ${{ secrets.OPENROUTER_API_KEY }}
           claude_args: |
             --model @preset/claude-code-github-action
 
@@ -52,4 +52,3 @@ jobs:
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           # claude_args: '--allowed-tools Bash(gh pr:*)'
-
