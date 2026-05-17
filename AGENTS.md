@@ -34,4 +34,7 @@ gh pr checks --watch
 
 # 6) Verify merge commit CI on main
 gh run list --branch main --commit "<merge_sha>" --json databaseId,name,status,conclusion,url
+
+# 7) Inspect failed workflow logs in sandbox-safe path
+XDG_CACHE_HOME=$PWD/.tmp/gh-cache gh run view "<run_id>" --log-failed
 ```
