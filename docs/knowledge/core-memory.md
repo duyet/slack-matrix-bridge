@@ -1,6 +1,6 @@
 # Core Maintenance Memory
 
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 ## Automation Loop
 
@@ -51,6 +51,9 @@ gh pr checks --watch
 
 # 5) Verify merge commit CI on main
 gh run list --branch main --commit "<merge_sha>" --json databaseId,name,status,conclusion,url
+
+# 6) Inspect failed workflow logs in sandbox-safe path
+XDG_CACHE_HOME=$PWD/.tmp/gh-cache gh run view "<run_id>" --log-failed
 ```
 
 ## Durable Rules
@@ -60,3 +63,6 @@ gh run list --branch main --commit "<merge_sha>" --json databaseId,name,status,c
 - Do not create dated review documents (for example `code-smell-dead-code-YYYY-MM-DD.md`).
 - Update this file for recurring knowledge instead.
 - Keep `vitest` scoped to repo tests (exclude local cache/temp directories like `.bun-cache` and `.bun-tmp`).
+- If a PR edits `.github/workflows/claude*.yml`, `Claude Code Review` may fail
+  with `Workflow validation failed` until default-branch workflow content
+  matches. Treat that as workflow sync behavior, not app-code regression.

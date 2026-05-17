@@ -185,11 +185,18 @@ gh pr checks --watch
 
 # 6) Verify merge commit CI on main
 gh run list --branch main --commit "<merge_sha>" --json databaseId,name,status,conclusion,url
+
+# 7) Inspect failed workflow logs in sandbox-safe path
+XDG_CACHE_HOME=$PWD/.tmp/gh-cache gh run view "<run_id>" --log-failed
 ```
 
 ## Core Maintenance Memory
 
 Keep durable automation notes in [`docs/knowledge/core-memory.md`](./docs/knowledge/core-memory.md) and keep it listed in [`docs/INDEX.md`](./docs/INDEX.md). Do not create dated code-smell/dead-code report files.
+
+If a PR edits `.github/workflows/claude*.yml`, `Claude Code Review` may fail with
+`Workflow validation failed` until the workflow content matches default-branch
+content. Treat this as a workflow-sync constraint, not an app-code regression.
 
 ## Testing Strategy
 
