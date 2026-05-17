@@ -521,8 +521,12 @@ app.get('/', (c) => {
           }
 
           try {
-            // Validate URL format
-            new URL(hookshotUrl);
+            // Validate URL format and protocol (align with backend SSRF checks)
+            const parsedUrl = new URL(hookshotUrl);
+            if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+              showError('Invalid URL protocol. Please use http:// or https://');
+              return;
+            }
 
             // Generate Base64 encoded version
             const base64Encoded = encodeBase64Url(hookshotUrl);
@@ -549,7 +553,11 @@ app.get('/', (c) => {
         }
 
         function copyToClipboard(elementId, button) {
-          const text = document.getElementById(elementId).textContent;
+          const text = document.getElementById(elementId)?.textContent;
+          if (!text) {
+            showError('Nothing to copy yet. Generate a bridge URL first.');
+            return;
+          }
           navigator.clipboard.writeText(text).then(() => {
             const originalText = button.textContent;
             button.textContent = 'Copied!';
