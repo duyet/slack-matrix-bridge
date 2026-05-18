@@ -16,8 +16,10 @@ bun install
 
 # 2) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
+git log --since="<ISO-8601 timestamp>" --no-merges --name-only --pretty=format:'%h %ad %s' --date=iso
 # Fallback when no saved timestamp is available
 git log --since="7 days ago" --name-only --pretty=format:'%h %ad %s' --date=iso
+git log --since="7 days ago" --no-merges --name-only --pretty=format:'%h %ad %s' --date=iso
 
 # 3) Prove dead code with zero references (exclude tests)
 rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!**/__tests__/**' --glob '!tests/**'
