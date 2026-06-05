@@ -26,10 +26,10 @@
     "hono": "^4.12.18"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.12.20",
+    "@cloudflare/vitest-pool-workers": "^0.16.13",
     "@cloudflare/workers-types": "^4.20241227.0",
     "typescript": "^5.7.2",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.8",
     "wrangler": "^4.90.1"
   },
   "overrides": {
@@ -37,7 +37,6 @@
     "postcss": "8.5.14",
     "rollup": "4.60.3",
     "picomatch": "4.0.4",
-    "undici": "7.25.0",
-    "ws": "8.20.1"
+    "undici": "7.25.0"
   }
 }
