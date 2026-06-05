@@ -1,19 +1,19 @@
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
-import { defaultExclude } from 'vitest/config';
+import { cloudflareTest } from '@cloudflare/vitest-pool-workers';
+import { defaultExclude, defineConfig } from 'vitest/config';
 
-export default defineWorkersConfig({
+export default defineConfig({
+  plugins: [
+    cloudflareTest({
+      isolatedStorage: true,
+      wrangler: {
+        configPath: './wrangler.toml',
+      },
+    }),
+  ],
   test: {
     globals: true,
+    maxWorkers: 1,
     exclude: [...defaultExclude, '**/.bun-cache/**', '**/.bun-tmp/**'],
-    pool: '@cloudflare/vitest-pool-workers',
-    poolOptions: {
-      workers: {
-        isolatedStorage: true,
-        wrangler: {
-          configPath: './wrangler.toml',
-        },
-      },
-    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
