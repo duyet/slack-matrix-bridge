@@ -73,6 +73,48 @@ describe('Block Kit parsing', () => {
       expect(result.text).toContain('*Header*');
       expect(result.text).toContain('- Field value');
     });
+
+    it('should parse Block Kit fields in SlackTextObject format (real Slack API)', () => {
+      const payload: SlackPayload = {
+        blocks: [
+          {
+            type: 'section',
+            text: { type: 'mrkdwn', text: 'NEW issue\nLog Message: CHECKPOINTER WARNING: Using InMemorySaver at startup.' },
+            fields: [
+              { type: 'mrkdwn', text: '*project:*\ndev-ui' }
+            ]
+          }
+        ]
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('NEW issue');
+      expect(result.text).toContain('CHECKPOINTER WARNING');
+      expect(result.text).toContain('project: dev-ui');
+      expect(result.text).not.toContain('undefined');
+    });
+
+    it('should parse multiple Block Kit fields with labels and bare values', () => {
+      const payload: SlackPayload = {
+        blocks: [
+          {
+            type: 'section',
+            fields: [
+              { type: 'mrkdwn', text: '*project:*\ndev-ui' },
+              { type: 'mrkdwn', text: '*severity:*\nhigh' },
+              { type: 'plain_text', text: 'standalone value' }
+            ]
+          }
+        ]
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('project: dev-ui');
+      expect(result.text).toContain('severity: high');
+      expect(result.text).toContain('- standalone value');
+    });
   });
 
   describe('header blocks', () => {

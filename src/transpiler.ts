@@ -24,7 +24,7 @@ interface SlackField {
 interface SlackBlock {
   type: string;
   text?: SlackTextObject;
-  fields?: SlackField[];
+  fields?: (SlackField | SlackTextObject)[];
   elements?: SlackTextObject[];
   image_url?: string;
   alt_text?: string;
@@ -107,6 +107,29 @@ function parseBlock(block: SlackBlock): TranspilerResult {
 }
 
 /**
+ * Extracts readable text from a section field, handling both formats:
+ * - Block Kit: { type: "mrkdwn", text: "*project:*\ndev-ui" }
+ * - Legacy:   { title: "project", value: "dev-ui" }
+ */
+function extractFieldText(field: SlackField | SlackTextObject): string | undefined {
+  // Block Kit text object: has 'type' discriminant and 'text' content
+  if ('type' in field && 'text' in field && !('value' in field)) {
+    return field.text!
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\n/g, ' ')
+      .trim();
+  }
+
+  // Legacy SlackField: has 'title' and 'value'
+  if ('value' in field) {
+    const f = field as SlackField;
+    return f.title ? `${f.title}: ${f.value}` : f.value;
+  }
+
+  return undefined;
+}
+
+/**
  * Parses section blocks with optional text and fields.
  */
 function parseSectionBlock(block: SlackBlock): TranspilerResult {
@@ -120,10 +143,9 @@ function parseSectionBlock(block: SlackBlock): TranspilerResult {
   // Section fields (displayed as columns in Slack, as list in Matrix)
   if (block.fields && Array.isArray(block.fields)) {
     for (const field of block.fields) {
-      if (field.title) {
-        text += `- ${field.title}: ${field.value}\n`;
-      } else {
-        text += `- ${field.value}\n`;
+      const fieldText = extractFieldText(field);
+      if (fieldText) {
+        text += `- ${fieldText}\n`;
       }
     }
     text += '\n';
