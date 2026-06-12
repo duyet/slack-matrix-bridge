@@ -16,18 +16,10 @@ git log --since="7 days ago" --name-only --pretty=format:'%h %ad %s' --date=iso
 git log --since="7 days ago" --no-merges --name-only --pretty=format:'%h %ad %s' --date=iso
 ```
 
-1. Prepare writable Bun temp/cache dirs for sandboxed runs:
-
-```bash
-mkdir -p .bun-tmp .bun-cache
-export BUN_TMPDIR="$PWD/.bun-tmp"
-export BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache"
-```
-
 1. Install dependencies in fresh worktrees:
 
 ```bash
-bun install
+pnpm install
 ```
 
 1. Prove dead code candidates with zero non-test references:
@@ -39,9 +31,9 @@ rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!*
 1. Verify before PR:
 
 ```bash
-bun audit
-XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp bun run test:run
-bun run typecheck
+pnpm audit
+XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp pnpm run test:run
+pnpm run typecheck
 ```
 
 1. Open and babysit PR:
@@ -64,9 +56,9 @@ XDG_CACHE_HOME=$PWD/.tmp/gh-cache gh run view "<run_id>" --log-failed
 - Prefer minimal safe fixes over refactors.
 - Do not create dated review documents (for example `code-smell-dead-code-YYYY-MM-DD.md`).
 - Update this file for recurring knowledge instead.
-- Keep `vitest` scoped to repo tests (exclude local cache/temp directories like `.bun-cache` and `.bun-tmp`).
+- Keep `vitest` scoped to repo tests.
 - If commit scope since last run is empty, report a no-op run and use the 7-day window for context-only review.
-- If `bun audit` reports GHSA-58qx-3vcg-4xpx (`ws`), pin `overrides.ws` to a patched release and re-run checks.
+- If `pnpm audit` reports GHSA-58qx-3vcg-4xpx (`ws`), pin `overrides.ws` to a patched release and re-run checks.
 - If a PR edits `.github/workflows/claude*.yml`, `Claude Code Review` may fail
   with `Workflow validation failed` until default-branch workflow content
   matches. Treat that as workflow sync behavior, not app-code regression.

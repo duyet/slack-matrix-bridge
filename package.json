@@ -4,11 +4,12 @@
   "description": "Slack to Matrix messaging bridge on Cloudflare Workers",
   "main": "src/index.ts",
   "type": "module",
+  "packageManager": "pnpm@10.12.1",
   "scripts": {
-    "dev": "bun run wrangler dev",
-    "deploy": "bun run wrangler deploy",
-    "tail": "bun run wrangler tail",
-    "typecheck": "bun run tsc --noEmit",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"
@@ -26,17 +27,24 @@
     "hono": "^4.12.25"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.16.13",
-    "@cloudflare/workers-types": "^4.20241227.0",
-    "typescript": "^5.7.2",
+    "@cloudflare/vitest-pool-workers": "^0.16.15",
+    "@cloudflare/workers-types": "^4.20260612.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.8",
-    "wrangler": "^4.90.1"
+    "wrangler": "^4.100.0"
   },
-  "overrides": {
-    "vite": "7.3.3",
-    "postcss": "8.5.14",
-    "rollup": "4.60.3",
-    "picomatch": "4.0.4",
-    "undici": "7.25.0"
+  "pnpm": {
+    "overrides": {
+      "vite": "7.3.3",
+      "postcss": "8.5.14",
+      "rollup": "4.60.3",
+      "picomatch": "4.0.4",
+      "undici": "7.25.0"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
   }
 }

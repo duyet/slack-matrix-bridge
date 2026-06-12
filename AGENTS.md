@@ -6,13 +6,8 @@ Maintenance memory lives in [`docs/knowledge/core-memory.md`](./docs/knowledge/c
 ## Automation Workflow Commands
 
 ```bash
-# 0) Use writable local cache/temp dirs in sandboxed environments
-mkdir -p .bun-tmp .bun-cache
-export BUN_TMPDIR="$PWD/.bun-tmp"
-export BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache"
-
 # 1) Install dependencies in fresh worktrees
-bun install
+pnpm install
 
 # 2) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
@@ -25,9 +20,9 @@ git log --since="7 days ago" --no-merges --name-only --pretty=format:'%h %ad %s'
 rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!**/__tests__/**' --glob '!tests/**'
 
 # 4) Verify before PR
-bun audit
-XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp bun run test:run
-bun run typecheck
+pnpm audit
+XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp pnpm run test:run
+pnpm run typecheck
 
 # 5) PR + review loop
 gh pr create --fill

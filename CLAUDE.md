@@ -117,39 +117,39 @@ decodeMatrixUrl(encodedPath: string): string
 
 ## Package Manager
 
-**Bun** is used as the package manager and runtime for this project. All `npm run` commands are executed via `bun run`.
+**pnpm** is used as the package manager for this project. All `npm run` commands are executed via `pnpm run`.
 
 ```bash
 # Install dependencies
-bun install
+pnpm install
 
 # Run any npm script
-bun run <script>
+pnpm run <script>
 ```
 
 ## Development Commands
 
 ```bash
 # Local development with hot reload
-bun run dev
+pnpm run dev
 
 # Deploy to Cloudflare Workers
-bun run deploy
+pnpm run deploy
 
 # View real-time logs from production
-bun run tail
+pnpm run tail
 
 # Type checking without emitting files
-bun run typecheck
+pnpm run typecheck
 
 # Run tests in watch mode
-bun test
+pnpm test
 
 # Run tests once
-bun run test:run
+pnpm run test:run
 
 # Run tests with coverage report
-bun run test:coverage
+pnpm run test:coverage
 ```
 
 ## Automation Workflow Commands
@@ -157,13 +157,8 @@ bun run test:coverage
 Use these commands for code-smell and dead-code automation runs:
 
 ```bash
-# 0) Use writable local cache/temp dirs in sandboxed environments
-mkdir -p .bun-tmp .bun-cache
-export BUN_TMPDIR="$PWD/.bun-tmp"
-export BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache"
-
 # 1) Install dependencies in fresh worktrees
-bun install
+pnpm install
 
 # 2) Find commit scope since last automation run (or last 7 days fallback)
 git log --since="<ISO-8601 timestamp>" --name-only --pretty=format:'%h %ad %s' --date=iso
@@ -176,9 +171,9 @@ git log --since="7 days ago" --no-merges --name-only --pretty=format:'%h %ad %s'
 rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!**/__tests__/**' --glob '!tests/**'
 
 # 4) Verify before PR
-bun audit
-XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp bun run test:run
-bun run typecheck
+pnpm audit
+XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp pnpm run test:run
+pnpm run typecheck
 
 # 5) PR + review loop
 gh pr create --fill
@@ -225,13 +220,13 @@ content. Treat this as a workflow-sync constraint, not an app-code regression.
 
 ```bash
 # Watch mode for development
-bun test
+pnpm test
 
 # Single run for CI/CD
-bun run test:run
+pnpm run test:run
 
 # With coverage
-bun run test:coverage
+pnpm run test:coverage
 ```
 
 ## Important Implementation Details
@@ -381,33 +376,32 @@ V8 Isolates enable 0ms cold starts vs ~500ms for container-based Lambda.
 
 ```bash
 # Reinstall wrangler globally
-bun uninstall -g wrangler
-bun install -g wrangler
+pnpm remove -g wrangler
+pnpm add -g wrangler
 
-# Or use bunx to avoid global install
-bunx wrangler deploy
+# Or use pnpm dlx to avoid global install
+pnpm dlx wrangler deploy
 ```
 
-### Type Errors After `bun install`
+### Type Errors After `pnpm install`
 
 ```bash
 # Regenerate type definitions
-bun run typecheck
+pnpm run typecheck
 
 # Clear cache and reinstall
-rm -rf node_modules bun.lockb
-bun install
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
 ```
 
 ### Tests Failing Locally
 
 ```bash
-# Ensure test environment is clean and writable in sandbox
-mkdir -p .bun-tmp .bun-cache
-BUN_TMPDIR="$PWD/.bun-tmp" BUN_INSTALL_CACHE_DIR="$PWD/.bun-cache" bun run test:run
+# Ensure test environment is clean and writable
+pnpm run test:run
 
 # Check if specific test is failing
-bun test transpiler.test.ts
+pnpm test transpiler.test.ts
 ```
 
 ## Resources

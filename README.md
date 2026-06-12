@@ -134,13 +134,13 @@ git clone https://github.com/duyet/slack-matrix-bridge.git
 cd slack-matrix-bridge
 
 # Install dependencies
-bun install
+pnpm install
 
 # Login to Cloudflare
-bun run wrangler login
+pnpm exec wrangler login
 
 # Deploy
-bun run deploy
+pnpm run deploy
 ```
 
 ## License
