@@ -24,7 +24,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "hono": "^4.12.25"
+    "hono": "^4.12.27"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.15",
