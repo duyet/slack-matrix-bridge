@@ -17,7 +17,7 @@ importers:
     dependencies:
       hono:
         specifier: ^4.12.25
-        version: 4.12.25
+        version: 4.12.34
     devDependencies:
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.16.15
@@ -803,8 +803,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  hono@4.12.25:
-    resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
+  hono@4.12.34:
+    resolution: {integrity: sha512-GqXJqY/xJkJmuloTrnV1ZEXG3fqte+VjkUqoRNZXcrUidiUOP4fMSIHHY4tsqZBK++kVyWmt/AAfSUuy57/eSA==}
     engines: {node: '>=16.9.0'}
 
   kleur@4.1.5:
@@ -819,8 +819,8 @@ packages:
     engines: {node: '>=22.0.0'}
     hasBin: true
 
-  nanoid@3.3.12:
-    resolution: {integrity: sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==}
+  nanoid@3.3.18:
+    resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -1574,7 +1574,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  hono@4.12.25: {}
+  hono@4.12.34: {}
 
   kleur@4.1.5: {}
 
@@ -1594,7 +1594,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  nanoid@3.3.12: {}
+  nanoid@3.3.18: {}
 
   obug@2.1.2: {}
 
@@ -1608,7 +1608,7 @@ snapshots:
 
   postcss@8.5.14:
     dependencies:
-      nanoid: 3.3.12
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
