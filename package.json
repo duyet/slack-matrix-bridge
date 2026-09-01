@@ -4,7 +4,7 @@
   "description": "Slack to Matrix messaging bridge on Cloudflare Workers",
   "main": "src/index.ts",
   "type": "module",
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@11.25.0",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
