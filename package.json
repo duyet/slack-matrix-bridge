@@ -30,7 +30,7 @@
     "@cloudflare/vitest-pool-workers": "^0.16.15",
     "@cloudflare/workers-types": "^4.20260612.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
+    "vitest": "^5.0.0",
     "wrangler": "^4.100.0"
   },
   "pnpm": {
