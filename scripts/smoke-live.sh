@@ -50,6 +50,6 @@ fi
 
 post "bugsink-test" '{"text":"TEST issue","blocks":[{"type":"header","text":{"type":"plain_text","text":"TEST issue"}},{"type":"section","text":{"type":"mrkdwn","text":"Smoke test by slack-matrix-bridge."}},{"type":"section","fields":[{"type":"mrkdwn","text":"*project*: dev-api"},{"type":"mrkdwn","text":"*message backend*: smoke-live"}]}]}'
 
-post "bugsink-alert" '{"text":"TypeError: smoke test","username":"Bugsink","blocks":[{"type":"header","text":{"type":"plain_text","text":"TypeError: smoke test"}},{"type":"section","text":{"type":"plain_text","text":"NEW issue"}},{"type":"section","fields":[{"type":"mrkdwn","text":"*project*: dev-api"},{"type":"mrkdwn","text":"*environment*: production"},{"type":"mrkdwn","text":"*server*: api-1"}]},{"type":"section","text":{"type":"mrkdwn","text":"<https://example.com/issues/smoke|view on Bugsink>"}}]}'
+post "bugsink-alert" '{"text":"TypeError: smoke test","username":"Bugsink","blocks":[{"type":"header","text":{"type":"plain_text","text":"TypeError: smoke test"}},{"type":"section","text":{"type":"plain_text","text":"NEW issue"}},{"type":"section","fields":[{"type":"mrkdwn","text":"*project*: dev-api"},{"type":"mrkdwn","text":"*environment*: production"},{"type":"mrkdwn","text":"*server*: api-1"},{"type":"mrkdwn","text":"*message backend*: smoke-live"}]},{"type":"section","text":{"type":"mrkdwn","text":"<https://example.com/issues/smoke|view on Bugsink>"}}]}'
 
 echo "PASS evidence=$log"

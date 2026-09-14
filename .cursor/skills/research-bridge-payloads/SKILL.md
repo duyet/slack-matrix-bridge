@@ -35,4 +35,4 @@ Do not guess field names. Pull current sender docs and a real sample, then map e
 - Inbound sample (trimmed)
 - Field map
 - Gaps (dropped fields, wrong key for dest)
-- Proposed fixture name and assertions (`<h3>`, labeled fields, `external_url`, no `Debug metadata`)
+- Proposed fixture name and assertions (`<h3>`, labeled fields, no `Debug metadata`; `external_url` only for non-suppressed source URLs — unset when the only link is `view on Bugsink`)

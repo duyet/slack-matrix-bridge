@@ -104,9 +104,12 @@ describe('smoke: Bugsink conversion quality', () => {
     assertQuality(result);
     expect(result.username).toBe('Bugsink');
     expect(result.html).toContain('<h3>TypeError: cannot read property of undefined</h3>');
+    expect(result.text).toContain('NEW issue');
     expect(result.html).toContain('<strong>project:</strong> dev-api');
     expect(result.html).toContain('<strong>environment:</strong> production');
     expect(result.html).toContain('<strong>server:</strong> api-1');
+    expect(result.html).toContain('<strong>message backend:</strong> private-dp-bugsink');
+    expect(result.text).toContain('message backend: private-dp-bugsink');
     expect(result.html).not.toContain('view on Bugsink');
     expect(result.html).not.toContain('bugsink.example');
     expect(result.text).not.toContain('view on Bugsink');
@@ -140,6 +143,7 @@ describe('smoke: worker forwards Hookshot html', () => {
     assertQuality(forwarded);
     expect(forwarded.html).toContain('<h3>TEST issue</h3>');
     expect(forwarded.html).toContain('<strong>project:</strong> dev-api');
+    expect(forwarded.html).toContain('<strong>message backend:</strong> private-dp-bugsink');
   });
 
   it('returns ok and forwards html for a Bugsink alert payload', async () => {
@@ -154,9 +158,14 @@ describe('smoke: worker forwards Hookshot html', () => {
     const forwarded = JSON.parse(capturedBody!);
     assertQuality(forwarded);
     expect(forwarded.username).toBe('Bugsink');
+    expect(forwarded.html).toContain('<strong>project:</strong> dev-api');
     expect(forwarded.html).toContain('<strong>environment:</strong> production');
     expect(forwarded.html).toContain('<strong>server:</strong> api-1');
+    expect(forwarded.html).toContain('<strong>message backend:</strong> private-dp-bugsink');
     expect(forwarded.html).not.toContain('view on Bugsink');
+    expect(forwarded.text).not.toContain('view on Bugsink');
+    expect(forwarded.html).not.toContain('bugsink.example');
+    expect(forwarded.text).not.toContain('bugsink.example');
     expect(forwarded.external_url).toBeUndefined();
   });
 });
