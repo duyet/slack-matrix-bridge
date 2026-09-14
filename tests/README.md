@@ -14,6 +14,7 @@ The Slack-to-Matrix Bridge uses Vitest with the Cloudflare Workers testing pool 
   - End-to-end transformation
   - Base64 URL utilities
 
+- **`src/smoke.test.ts`** - Bugsink Slack fixtures through transpiler + worker (Hookshot `html`, fields, no debug dump)
 - **`src/index.test.ts`** - Tests for the Cloudflare Workers handler
   - HTTP method validation (405 for non-POST)
   - Base64 URL validation (400 for invalid Base64)
@@ -35,6 +36,12 @@ pnpm test
 
 # Run tests once
 pnpm run test:run
+
+# Smoke only (Bugsink fixtures)
+pnpm run test:smoke
+
+# Live POST to a real bridge URL (sends Matrix messages)
+SMOKE_BRIDGE_URL='https://slack-matrix-bridge.duyet.workers.dev/<BASE64>' pnpm run test:smoke:live
 
 # Run tests with coverage report
 pnpm run test:coverage

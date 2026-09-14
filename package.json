@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:smoke": "vitest run src/smoke.test.ts",
+    "test:smoke:live": "scripts/smoke-live.sh",
     "test:coverage": "vitest run --coverage"
   },
   "keywords": [
