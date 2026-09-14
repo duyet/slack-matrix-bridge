@@ -106,7 +106,7 @@ curl -X POST https://your-worker.workers.dev/BASE64_STRING \
 
 ### Debug Metadata Mode (Optional)
 
-By default, forwarded messages include only safe metadata (for example, timestamp/source msgtype) and do **not** include internal Matrix identifiers (`event_id`, `room_id`, `sender`).
+By default, forwarded messages have **no** debug footer (no timestamp/msgtype dump and no internal Matrix identifiers).
 
 If you need forensic context temporarily, you can enable debug metadata on a per-request basis:
 

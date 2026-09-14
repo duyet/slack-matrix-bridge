@@ -581,7 +581,7 @@ describe('transformSlackToMatrix', () => {
   });
 
   describe('metadata enrichment', () => {
-    it('should append source URL and only safe metadata in normal mode', () => {
+    it('should keep source as a normal field and skip debug dump in normal mode', () => {
       const payload: SlackPayload = {
         content: {
           body: '<https://example.com/issues/1|Issue Link>',
@@ -597,20 +597,16 @@ describe('transformSlackToMatrix', () => {
 
       expect(result.external_url).toBe('https://example.com/issues/1');
       expect(result.text).toContain('Issue Link');
-      expect(result.text).toContain('Debug metadata');
-      expect(result.text).toContain('Upstream source: https://example.com/issues/1');
-      expect(result.text).toContain('Timestamp: 2024-05-01T12:00:00.000Z');
-      expect(result.text).toContain('Source msgtype: m.notice');
+      expect(result.text).toContain('https://example.com/issues/1');
+      expect(result.text).not.toContain('Debug metadata');
       expect(result.text).not.toContain('Event ID: $event123');
       expect(result.text).not.toContain('Room ID: !room:example.com');
       expect(result.text).not.toContain('Sender: @bot:example.com');
       expect(result.format).toBe('org.matrix.custom.html');
+      expect(result.html).toBe(result.formatted_body);
       expect(result.formatted_body).not.toContain('&lt;https://example.com/issues/1|Issue Link&gt;');
-      expect(result.formatted_body).toContain('Issue Link');
-      expect(result.formatted_body).toContain('<strong>Debug metadata</strong>');
-      expect(result.formatted_body).toContain('<strong>Upstream source:</strong>');
       expect(result.formatted_body).toContain(
-        '<a href="https://example.com/issues/1">https://example.com/issues/1</a>'
+        '<a href="https://example.com/issues/1">Issue Link</a>'
       );
     });
 
@@ -645,7 +641,8 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.external_url).toBe('https://example.com/issues/1');
-      expect(result.text).toContain('Upstream source: https://example.com/issues/1');
+      expect(result.text).toContain('https://example.com/issues/1');
+      expect(result.text).not.toContain('Debug metadata');
     });
 
     it('should normalize webhook error links into quoted code and keep source URL', () => {
@@ -677,7 +674,8 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.external_url).toBe('http://localhost:8000/issues/issue/abc/event/last/');
-      expect(result.text).toContain('Upstream source: http://localhost:8000/issues/issue/abc/event/last/');
+      expect(result.text).toContain('http://localhost:8000/issues/issue/abc/event/last/');
+      expect(result.text).not.toContain('Debug metadata');
     });
 
     it('should ignore non-http source URLs from formatted body metadata', () => {
@@ -706,7 +704,101 @@ describe('transformSlackToMatrix', () => {
       const result = transformSlackToMatrix(payload);
 
       expect(result.external_url).toBe('https://example.com/source');
-      expect(result.text).toContain('Upstream source: https://example.com/source');
+      expect(result.text).toContain('https://example.com/source');
+    });
+
+    it('should surface top-level project/env/server when not already in the body', () => {
+      const payload: SlackPayload = {
+        text: 'Unhandled exception in request handler',
+        project: 'dev-api',
+        environment: 'production',
+        server: 'api-1',
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('project: dev-api');
+      expect(result.text).toContain('environment: production');
+      expect(result.text).toContain('server: api-1');
+      expect(result.html).toContain('<strong>project:</strong> dev-api');
+      expect(result.html).toContain('<strong>environment:</strong> production');
+    });
+  });
+
+  describe('Bugsink Slack webhooks', () => {
+    it('should format a Bugsink test message with project and backend fields', () => {
+      const payload: SlackPayload = {
+        text: 'TEST issue',
+        blocks: [
+          {
+            type: 'header',
+            text: { type: 'plain_text', text: 'TEST issue' },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: 'Test message by Bugsink to test the webhook setup.',
+            },
+          },
+          {
+            type: 'section',
+            fields: [
+              { type: 'mrkdwn', text: '*project*: dev-api' },
+              { type: 'mrkdwn', text: '*message backend*: private-dp-bugsink' },
+            ],
+          },
+        ],
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('## TEST issue');
+      expect(result.text).toContain('project: dev-api');
+      expect(result.text).toContain('message backend: private-dp-bugsink');
+      expect(result.html).toContain('<h3>TEST issue</h3>');
+      expect(result.html).toContain('<strong>project:</strong> dev-api');
+      expect(result.html).toContain('<strong>message backend:</strong> private-dp-bugsink');
+      expect(result.html).not.toContain('## TEST issue');
+      expect(result.text).not.toContain('Debug metadata');
+    });
+
+    it('should format a Bugsink alert with issue link, reason, and project', () => {
+      const payload: SlackPayload = {
+        text: 'TypeError: unhashable type: dict',
+        blocks: [
+          {
+            type: 'header',
+            text: { type: 'plain_text', text: 'TypeError: unhashable type: dict' },
+          },
+          {
+            type: 'section',
+            text: { type: 'plain_text', text: 'NEW issue' },
+          },
+          {
+            type: 'section',
+            fields: [{ type: 'mrkdwn', text: '*project*: dev-api' }],
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: '<https://bugsink.example/issues/issue/abc/event/last/|view on Bugsink>',
+            },
+          },
+        ],
+      };
+
+      const result = transformSlackToMatrix(payload);
+
+      expect(result.text).toContain('NEW issue');
+      expect(result.text).toContain('project: dev-api');
+      expect(result.text).not.toContain('view on Bugsink');
+      expect(result.text).not.toContain('bugsink.example');
+      expect(result.external_url).toBeUndefined();
+      expect(result.html).toContain('<h3>TypeError: unhashable type: dict</h3>');
+      expect(result.html).not.toContain('view on Bugsink');
+      expect(result.html).not.toContain('bugsink.example');
     });
   });
 
@@ -735,7 +827,7 @@ describe('transformSlackToMatrix', () => {
       expect(result.username).toBe('GitHub');
       expect(result.text).toContain('🟢');
       expect(result.text).toContain('New commit in repository');
-      expect(result.text).toContain('https://github.com/repo/commit/abc123');
+      expect(result.text).toContain('[New commit in repository](https://github.com/repo/commit/abc123)');
       expect(result.text).toContain('Repository: user/repo');
       expect(result.text).toContain('Branch: main');
       expect(result.text).toContain('Added new feature for authentication');

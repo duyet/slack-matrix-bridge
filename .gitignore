@@ -29,6 +29,7 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+.tmp/
 
 # Cloudflare Workers
 .wrangler/

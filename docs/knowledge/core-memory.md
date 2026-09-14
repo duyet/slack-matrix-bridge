@@ -1,6 +1,6 @@
 # Core Maintenance Memory
 
-Last updated: 2026-05-19
+Last updated: 2026-09-14
 
 ## Automation Loop
 
@@ -33,6 +33,7 @@ rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!*
 ```bash
 pnpm audit
 XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp pnpm run test:run
+pnpm run test:smoke
 pnpm run typecheck
 ```
 
@@ -57,6 +58,8 @@ XDG_CACHE_HOME=$PWD/.tmp/gh-cache gh run view "<run_id>" --log-failed
 - Do not create dated review documents (for example `code-smell-dead-code-YYYY-MM-DD.md`).
 - Update this file for recurring knowledge instead.
 - Keep `vitest` scoped to repo tests.
+- Smoke lives in `src/smoke.test.ts`. Live smoke is `scripts/smoke-live.sh` and must be opt-in (`SMOKE_BRIDGE_URL`).
+- Agent verification/research/judge skills live under `.cursor/skills/` (mirrored in `.grok/skills/`).
 - If commit scope since last run is empty, report a no-op run and use the 7-day window for context-only review.
 - If `pnpm audit` reports GHSA-58qx-3vcg-4xpx (`ws`), pin `overrides.ws` to a patched release and re-run checks.
 - If a PR edits `.github/workflows/claude*.yml`, `Claude Code Review` may fail
