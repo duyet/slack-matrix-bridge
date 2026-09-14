@@ -22,7 +22,10 @@ rg -n "<symbol_name>" src --glob '!**/*.test.*' --glob '!**/*.spec.*' --glob '!*
 # 4) Verify before PR
 pnpm audit
 XDG_CONFIG_HOME=$PWD/.tmp/xdg WRANGLER_HOME=$PWD/.tmp/wrangler TMPDIR=$PWD/.tmp pnpm run test:run
+pnpm run test:smoke
 pnpm run typecheck
+# Optional live Hookshot smoke (posts real Matrix messages)
+# SMOKE_BRIDGE_URL='https://slack-matrix-bridge.duyet.workers.dev/<BASE64>' pnpm run test:smoke:live
 
 # 5) PR + review loop
 gh pr create --fill
